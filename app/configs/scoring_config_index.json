@@ -1,0 +1,132 @@
+{
+  "categories": {
+    "fund_stability": {
+      "label": "Fund Stability",
+      "max_score": 20,
+      "metrics": {
+        "aum_billions": {
+          "label": "Assets Under Mgmt",
+          "field": "aum_billions",
+          "max_score": 20,
+          "direction": "min",
+          "format": "aum",
+          "thresholds": [
+            {"value": 100,  "score": 20},
+            {"value": 10,   "score": 16},
+            {"value": 1,    "score": 10},
+            {"value": 0.1,  "score": 5},
+            {"value": 0.01, "score": 1}
+          ]
+        }
+      }
+    },
+    "risk_profile": {
+      "label": "Risk Profile",
+      "max_score": 25,
+      "metrics": {
+        "annual_volatility": {
+          "label": "Annual Volatility",
+          "field": "annual_volatility",
+          "max_score": 13,
+          "direction": "max",
+          "format": "raw_pct",
+          "thresholds": [
+            {"value": 10,  "score": 13},
+            {"value": 15,  "score": 10},
+            {"value": 20,  "score": 7},
+            {"value": 25,  "score": 3},
+            {"value": 100, "score": 1}
+          ]
+        },
+        "max_drawdown": {
+          "label": "Max Drawdown",
+          "field": "max_drawdown",
+          "max_score": 12,
+          "direction": "max",
+          "format": "raw_pct",
+          "thresholds": [
+            {"value": 15,  "score": 12},
+            {"value": 25,  "score": 9},
+            {"value": 35,  "score": 6},
+            {"value": 50,  "score": 2},
+            {"value": 100, "score": 0}
+          ]
+        }
+      }
+    },
+    "returns": {
+      "label": "Returns",
+      "max_score": 30,
+      "metrics": {
+        "return_1y": {
+          "label": "1-Year Return",
+          "field": "return_1y",
+          "max_score": 15,
+          "direction": "min",
+          "format": "raw_pct",
+          "thresholds": [
+            {"value": 20, "score": 15},
+            {"value": 10, "score": 12},
+            {"value": 5,  "score": 8},
+            {"value": 0,  "score": 4},
+            {"value": -999, "score": 1}
+          ]
+        },
+        "return_3y_annualized": {
+          "label": "3-Year Annualized Return",
+          "field": "return_3y_annualized",
+          "max_score": 15,
+          "direction": "min",
+          "format": "raw_pct",
+          "thresholds": [
+            {"value": 15, "score": 15},
+            {"value": 10, "score": 12},
+            {"value": 7,  "score": 8},
+            {"value": 3,  "score": 4},
+            {"value": -999, "score": 1}
+          ]
+        }
+      }
+    },
+    "valuation": {
+      "label": "Valuation",
+      "max_score": 15,
+      "metrics": {
+        "trailingPE": {
+          "label": "P/E Ratio",
+          "field": "trailingPE",
+          "max_score": 15,
+          "direction": "max",
+          "format": "number",
+          "thresholds": [
+            {"value": 15, "score": 15},
+            {"value": 20, "score": 12},
+            {"value": 25, "score": 9},
+            {"value": 35, "score": 5},
+            {"value": 9999, "score": 2}
+          ]
+        }
+      }
+    },
+    "income": {
+      "label": "Income (Dividend Yield)",
+      "max_score": 10,
+      "metrics": {
+        "dividend_yield": {
+          "label": "Dividend Yield",
+          "field": "dividend_yield",
+          "max_score": 10,
+          "direction": "min",
+          "format": "raw_pct",
+          "thresholds": [
+            {"value": 3.0, "score": 10},
+            {"value": 2.0, "score": 8},
+            {"value": 1.0, "score": 5},
+            {"value": 0.5, "score": 3},
+            {"value": 9999, "score": 1}
+          ]
+        }
+      }
+    }
+  }
+}

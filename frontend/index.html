@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BgPanalyzeStock</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Bg<span>Panalyze</span>Stock</h1>
+  <p>AI-powered stock &amp; fund scoring — 100-point framework</p>
+</header>
+
+<main>
+
+  <!-- Search card -->
+  <div class="search-card">
+    <div class="tabs">
+      <button class="tab-btn active" data-mode="stock">Stock</button>
+      <button class="tab-btn" data-mode="fund">ETF / Fund</button>
+    </div>
+    <form id="search-form">
+      <div class="input-row">
+        <input
+          id="ticker-input"
+          type="text"
+          placeholder="e.g. AAPL, NVDA, TSLA"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        />
+        <button id="analyze-btn" type="submit">Analyze</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Error -->
+  <div id="error-section">
+    <strong>Error</strong> — <span id="error-msg"></span>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+
+    <div class="result-header">
+      <div class="result-meta">
+        <div>
+          <span class="result-name" id="result-name"></span>
+          <span class="result-ticker" id="result-ticker"></span>
+          <span class="result-ticker" id="result-type-badge"></span>
+        </div>
+        <span class="cached-badge" id="cached-badge" style="display:none"></span>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <span class="score-big" id="score-big"></span>
+          <span class="score-denom" id="score-denom"></span>
+        </div>
+        <div>
+          <div class="stars" id="stars-row"></div>
+          <div class="rating-text" id="rating-text"></div>
+        </div>
+      </div>
+
+      <div class="total-bar-wrap">
+        <div class="bar-track">
+          <div id="total-bar-fill" class="bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="categories-grid" id="categories-grid"></div>
+
+  </div><!-- /results -->
+
+</main>
+
+<footer>
+  Data: Finnhub (stocks) · Yahoo Finance (ETFs/funds) &nbsp;·&nbsp; For informational purposes only
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

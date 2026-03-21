@@ -1,0 +1,196 @@
+{
+  "categories": {
+    "business_quality": {
+      "label": "Business Quality",
+      "max_score": 30,
+      "metrics": {
+        "revenue_growth": {
+          "label": "Revenue Growth",
+          "max_score": 10,
+          "source": "auto",
+          "field": "revenue_growth_yoy",
+          "direction": "min",
+          "format": "percent",
+          "note": "Thresholds in decimals: 0.15 = 15% growth",
+          "thresholds": [
+            {"value": 0.15, "score": 10},
+            {"value": 0.08, "score": 7},
+            {"value": 0.03, "score": 5},
+            {"value": -999, "score": 2}
+          ]
+        },
+        "profitability": {
+          "label": "Profitability (Operating Margin)",
+          "max_score": 10,
+          "source": "auto",
+          "field": "operatingMargins",
+          "direction": "min",
+          "format": "percent",
+          "note": "Thresholds in decimals: 0.20 = 20% margin",
+          "thresholds": [
+            {"value": 0.20, "score": 10},
+            {"value": 0.12, "score": 7},
+            {"value": 0.05, "score": 5},
+            {"value": -999, "score": 2}
+          ]
+        },
+        "moat": {
+          "label": "Moat / Competitive Advantage",
+          "max_score": 10,
+          "source": "auto",
+          "field": "moat_proxy",
+          "direction": "min",
+          "format": "percent",
+          "note": "Proxy: avg of gross margin + ROE (normalized). 0.5 = 50% combined score.",
+          "thresholds": [
+            {"value": 0.50, "score": 10},
+            {"value": 0.30, "score": 7},
+            {"value": 0.10, "score": 3},
+            {"value": -999, "score": 1}
+          ]
+        }
+      }
+    },
+    "financial_strength": {
+      "label": "Financial Strength",
+      "max_score": 20,
+      "metrics": {
+        "debt_level": {
+          "label": "Debt Level (Debt/Equity)",
+          "max_score": 10,
+          "source": "auto",
+          "field": "debtToEquity",
+          "direction": "max",
+          "format": "number",
+          "note": "yfinance debtToEquity: 100 = 1.0x D/E ratio. Lower is better.",
+          "thresholds": [
+            {"value": 30,     "score": 10},
+            {"value": 80,     "score": 7},
+            {"value": 150,    "score": 5},
+            {"value": 999999, "score": 2}
+          ]
+        },
+        "cash_flow": {
+          "label": "Cash Flow Quality (FCF Margin)",
+          "max_score": 10,
+          "source": "auto",
+          "field": "fcf_margin",
+          "direction": "min",
+          "format": "percent",
+          "note": "Thresholds in decimals: 0.15 = 15% FCF margin",
+          "thresholds": [
+            {"value": 0.15, "score": 10},
+            {"value": 0.08, "score": 7},
+            {"value": 0.03, "score": 5},
+            {"value": -999, "score": 2}
+          ]
+        }
+      }
+    },
+    "growth_potential": {
+      "label": "Growth Potential",
+      "max_score": 20,
+      "metrics": {
+        "industry_growth": {
+          "label": "Industry Growth Outlook",
+          "max_score": 10,
+          "source": "auto",
+          "field": "industry_growth_proxy",
+          "direction": "min",
+          "format": "percent",
+          "note": "Proxy: forward revenue growth estimate from analysts. 0.20 = 20%.",
+          "thresholds": [
+            {"value": 0.20, "score": 10},
+            {"value": 0.08, "score": 6},
+            {"value": 0.00, "score": 3},
+            {"value": -999, "score": 1}
+          ]
+        },
+        "company_position": {
+          "label": "Company Position in Industry",
+          "max_score": 10,
+          "source": "auto",
+          "field": "analyst_buy_score",
+          "direction": "min",
+          "format": "number",
+          "note": "Proxy: inverted analyst recommendation mean (5=strong buy, 1=strong sell).",
+          "thresholds": [
+            {"value": 4.0, "score": 10},
+            {"value": 3.0, "score": 6},
+            {"value": 2.0, "score": 3},
+            {"value": -999, "score": 1}
+          ]
+        }
+      }
+    },
+    "valuation": {
+      "label": "Valuation",
+      "max_score": 20,
+      "metrics": {
+        "relative_valuation": {
+          "label": "Relative Valuation (P/E Ratio)",
+          "max_score": 10,
+          "source": "auto",
+          "field": "trailingPE",
+          "direction": "max",
+          "format": "number",
+          "note": "Lower P/E relative to peers = better value",
+          "thresholds": [
+            {"value": 15,     "score": 10},
+            {"value": 25,     "score": 7},
+            {"value": 40,     "score": 5},
+            {"value": 999999, "score": 2}
+          ]
+        },
+        "peg_ratio": {
+          "label": "PEG Ratio",
+          "max_score": 10,
+          "source": "auto",
+          "field": "trailingPegRatio",
+          "direction": "max",
+          "format": "number",
+          "note": "PEG < 1 is undervalued. Lower is better.",
+          "thresholds": [
+            {"value": 1,      "score": 10},
+            {"value": 2,      "score": 7},
+            {"value": 999999, "score": 3}
+          ]
+        }
+      }
+    },
+    "management": {
+      "label": "Management & Governance",
+      "max_score": 10,
+      "metrics": {
+        "capital_allocation": {
+          "label": "Capital Allocation",
+          "max_score": 5,
+          "source": "auto",
+          "field": "capital_allocation_proxy",
+          "direction": "min",
+          "format": "percent",
+          "note": "Proxy: Return on Equity. 0.20 = 20% ROE.",
+          "thresholds": [
+            {"value": 0.20, "score": 5},
+            {"value": 0.10, "score": 3},
+            {"value": -999, "score": 1}
+          ]
+        },
+        "transparency": {
+          "label": "Transparency / Track Record",
+          "max_score": 5,
+          "source": "auto",
+          "field": "analyst_coverage",
+          "direction": "min",
+          "format": "number",
+          "note": "Proxy: number of analyst opinions. More coverage = more scrutiny = more transparent.",
+          "thresholds": [
+            {"value": 20,   "score": 5},
+            {"value": 10,   "score": 3},
+            {"value": 0,    "score": 1}
+          ]
+        }
+      }
+    }
+  }
+}
