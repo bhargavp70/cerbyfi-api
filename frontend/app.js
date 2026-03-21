@@ -1,4 +1,7 @@
-const API_BASE = "http://localhost:8000";
+// Relative URL — frontend is served by the same FastAPI server
+const API_BASE = "";
+// Injected at build time by the server or set here for the web client
+const API_KEY  = window.CERBYFI_API_KEY || "";
 
 const state = { mode: "stock" };
 
@@ -35,7 +38,9 @@ async function analyze(ticker, mode) {
   hideAll();
 
   try {
-    const res = await fetch(`${API_BASE}/api/${mode}/${ticker}`);
+    const res = await fetch(`${API_BASE}/api/${mode}/${ticker}`, {
+      headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+    });
     const data = await res.json();
     if (!res.ok) {
       showError(ticker, data.detail || "Unknown error");

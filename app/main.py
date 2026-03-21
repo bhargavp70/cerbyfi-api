@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -6,22 +6,42 @@ from pathlib import Path
 from app.routers import stock, fund
 from app.models import HealthResponse, CacheStatsResponse
 from app.cache import score_cache
+from app.auth import require_api_key
+from app.config import settings
 
 app = FastAPI(
-    title="BgPanalyzeStock API",
+    title="CerbyFi API",
     description="Stock and ETF/Fund scoring API",
     version="1.0.0",
+    # Hide docs on production — set CERBYFI_API_KEY to enable auth
+    docs_url="/docs",
+    redoc_url=None,
 )
+
+# CORS — locked to known origins (set ALLOWED_ORIGINS in Railway env vars)
+_origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_methods=["GET", "DELETE"],
     allow_headers=["*"],
 )
 
-app.include_router(stock.router)
-app.include_router(fund.router)
+# All /api/* routes require a valid X-API-Key header
+app.include_router(stock.router, dependencies=[Depends(require_api_key)])
+app.include_router(fund.router,  dependencies=[Depends(require_api_key)])
+
+
+@app.get("/config.js", include_in_schema=False)
+def frontend_config():
+    """Injects the client API key into the browser without storing it in a static file."""
+    from fastapi.responses import Response
+    key = settings.cerbyfi_api_key or ""
+    return Response(
+        content=f"window.CERBYFI_API_KEY = '{key}';",
+        media_type="application/javascript",
+    )
 
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
@@ -29,12 +49,13 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", version="1.0.0")
 
 
-@app.get("/api/cache/stats", response_model=CacheStatsResponse, tags=["meta"])
+@app.get("/api/cache/stats", response_model=CacheStatsResponse, tags=["meta"],
+         dependencies=[Depends(require_api_key)])
 def cache_stats() -> CacheStatsResponse:
     return CacheStatsResponse(**score_cache.stats())
 
 
-@app.delete("/api/cache/{key}", tags=["meta"])
+@app.delete("/api/cache/{key}", tags=["meta"], dependencies=[Depends(require_api_key)])
 def invalidate_cache(key: str) -> dict:
     evicted = score_cache.invalidate(key)
     return {"evicted": evicted, "key": key}

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from anyio import to_thread
@@ -5,6 +6,8 @@ from app.models import ScoreResult, ErrorResponse
 from app.scorer import score_fund
 from app.cache import score_cache
 from app.routers.stock import _build_result
+
+_TICKER_RE = re.compile(r"^[A-Z0-9.\-]{1,10}$")
 
 router = APIRouter(prefix="/api/fund", tags=["fund"])
 
@@ -15,7 +18,10 @@ router = APIRouter(prefix="/api/fund", tags=["fund"])
     responses={404: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
 )
 async def analyze_fund(ticker: str) -> ScoreResult:
-    key = f"fund:{ticker.upper()}"
+    ticker = ticker.upper()
+    if not _TICKER_RE.match(ticker):
+        raise HTTPException(status_code=400, detail="Invalid ticker symbol.")
+    key = f"fund:{ticker}"
     cached = score_cache.get(key)
     if cached:
         return ScoreResult(**cached)

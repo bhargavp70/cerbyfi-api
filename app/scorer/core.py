@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 
 def apply_thresholds(value: float, thresholds: list, direction: str) -> Optional[int]:
@@ -29,7 +29,7 @@ def format_value(value: float, fmt: str) -> str:
     return str(value)
 
 
-def rating_label(total: int) -> tuple[int, str]:
+def rating_label(total: int) -> Tuple[int, str]:
     """Returns (stars, label) for a given total score out of 100."""
     if total >= 80:
         return 5, "Excellent — Strong buy candidate"
