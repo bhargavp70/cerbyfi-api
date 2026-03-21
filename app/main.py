@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -13,10 +14,20 @@ app = FastAPI(
     title="CerbyFi API",
     description="Stock and ETF/Fund scoring API",
     version="1.0.0",
-    # Hide docs on production — set CERBYFI_API_KEY to enable auth
     docs_url="/docs",
     redoc_url=None,
 )
+
+
+@app.middleware("http")
+async def force_https(request: Request, call_next):
+    """Redirect http:// → https:// using the X-Forwarded-Proto header set by Railway."""
+    proto = request.headers.get("x-forwarded-proto")
+    if proto == "http":
+        url = request.url.replace(scheme="https")
+        return RedirectResponse(url=str(url), status_code=301)
+    return await call_next(request)
+
 
 # CORS — locked to known origins (set ALLOWED_ORIGINS in Railway env vars)
 _origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
