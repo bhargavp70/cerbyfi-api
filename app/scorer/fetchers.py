@@ -27,11 +27,10 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     last_error = None
     for attempt in range(retries):
         try:
-            profile     = _get("/stable/profile",                       symbol=ticker)
-            ratios      = _get("/stable/ratios-ttm",                    symbol=ticker)
-            growth      = _get("/stable/financial-growth",              symbol=ticker, limit=1)
-            analyst     = _get("/stable/analyst-stock-recommendations", symbol=ticker, limit=1)
-            key_metrics = _get("/stable/key-metrics-ttm",               symbol=ticker)
+            profile     = _get("/stable/profile",          symbol=ticker)
+            ratios      = _get("/stable/ratios-ttm",       symbol=ticker)
+            growth      = _get("/stable/financial-growth", symbol=ticker, limit=1)
+            key_metrics = _get("/stable/key-metrics-ttm",  symbol=ticker)
 
             if not profile or not isinstance(profile, list) or not profile[0].get("companyName"):
                 raise ValueError(f"No data found for '{ticker}'. Check the ticker symbol.")
@@ -46,7 +45,6 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     p  = profile[0]
     r  = ratios[0]      if ratios and isinstance(ratios, list)      else {}
     g  = growth[0]      if growth and isinstance(growth, list)       else {}
-    a  = analyst[0]     if analyst and isinstance(analyst, list)     else {}
     km = key_metrics[0] if key_metrics and isinstance(key_metrics, list) else {}
 
     info = {
@@ -58,6 +56,16 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     rev = g.get("revenueGrowth")
     if rev is not None:
         info["revenue_growth_yoy"] = rev
+
+    # EPS growth YoY
+    eps_g = g.get("epsgrowth")
+    if eps_g is not None:
+        info["eps_growth"] = eps_g
+
+    # 5-year revenue growth per share
+    rev5y = g.get("fiveYRevenueGrowthPerShare")
+    if rev5y is not None:
+        info["revenue_growth_5y"] = rev5y
 
     # Operating margin
     op = r.get("operatingProfitMarginTTM")
@@ -84,35 +92,23 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     if fcf_ps is not None and rev_ps and rev_ps > 0:
         info["fcf_margin"] = fcf_ps / rev_ps
 
-    info["industry_growth_proxy"] = info.get("revenue_growth_yoy")
-
-    # Analyst score
-    buy   = a.get("analystRatingsStrongBuy", 0) + a.get("analystRatingsbuy", 0)
-    hold  = a.get("analystRatingsHold", 0)
-    sell  = a.get("analystRatingsSell", 0) + a.get("analystRatingsStrongSell", 0)
-    total_a = buy + hold + sell
-    if total_a > 0:
-        weighted = (
-            a.get("analystRatingsStrongBuy", 0) * 1 +
-            a.get("analystRatingsbuy",        0) * 2 +
-            a.get("analystRatingsHold",        0) * 3 +
-            a.get("analystRatingsSell",        0) * 4 +
-            a.get("analystRatingsStrongSell",  0) * 5
-        ) / total_a
-        info["analyst_buy_score"] = 6.0 - weighted
-        info["analyst_coverage"]  = total_a
-
     if roe is not None:
         info["capital_allocation_proxy"] = roe
+
+    # ROIC
+    roic = km.get("returnOnInvestedCapitalTTM")
+    if roic is not None:
+        info["roic"] = roic
 
     # PE / PEG (renamed in stable API)
     pe = r.get("priceToEarningsRatioTTM")
     if pe and pe > 0:
         info["trailingPE"] = pe
 
-    peg = r.get("priceToEarningsGrowthRatioTTM")
-    if peg is not None:
-        info["trailingPegRatio"] = peg
+    # Price / Free Cash Flow
+    p_fcf = r.get("priceToFreeCashFlowRatioTTM")
+    if p_fcf is not None and p_fcf > 0:
+        info["price_to_fcf"] = p_fcf
 
     return info
 

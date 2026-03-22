@@ -5,7 +5,7 @@
       "max_score": 30,
       "metrics": {
         "revenue_growth": {
-          "label": "Revenue Growth",
+          "label": "Revenue Growth (YoY)",
           "max_score": 10,
           "source": "auto",
           "field": "revenue_growth_yoy",
@@ -62,7 +62,7 @@
           "field": "debtToEquity",
           "direction": "max",
           "format": "number",
-          "note": "yfinance debtToEquity: 100 = 1.0x D/E ratio. Lower is better.",
+          "note": "100 = 1.0x D/E ratio. Lower is better.",
           "thresholds": [
             {"value": 30,     "score": 10},
             {"value": 80,     "score": 7},
@@ -91,34 +91,34 @@
       "label": "Growth Potential",
       "max_score": 20,
       "metrics": {
-        "industry_growth": {
-          "label": "Industry Growth Outlook",
+        "eps_growth": {
+          "label": "EPS Growth (YoY)",
           "max_score": 10,
           "source": "auto",
-          "field": "industry_growth_proxy",
+          "field": "eps_growth",
           "direction": "min",
           "format": "percent",
-          "note": "Proxy: forward revenue growth estimate from analysts. 0.20 = 20%.",
+          "note": "Year-over-year EPS growth. 0.20 = 20%.",
           "thresholds": [
             {"value": 0.20, "score": 10},
-            {"value": 0.08, "score": 6},
-            {"value": 0.00, "score": 3},
-            {"value": -999, "score": 1}
+            {"value": 0.10, "score": 7},
+            {"value": 0.00, "score": 4},
+            {"value": -999, "score": 2}
           ]
         },
-        "company_position": {
-          "label": "Company Position in Industry",
+        "revenue_growth_5y": {
+          "label": "Revenue Growth (5-Year)",
           "max_score": 10,
           "source": "auto",
-          "field": "analyst_buy_score",
+          "field": "revenue_growth_5y",
           "direction": "min",
-          "format": "number",
-          "note": "Proxy: inverted analyst recommendation mean (5=strong buy, 1=strong sell).",
+          "format": "percent",
+          "note": "5-year cumulative revenue growth per share. 0.50 = 50% total growth.",
           "thresholds": [
-            {"value": 4.0, "score": 10},
-            {"value": 3.0, "score": 6},
-            {"value": 2.0, "score": 3},
-            {"value": -999, "score": 1}
+            {"value": 0.50, "score": 10},
+            {"value": 0.25, "score": 7},
+            {"value": 0.05, "score": 4},
+            {"value": -999, "score": 2}
           ]
         }
       }
@@ -134,7 +134,7 @@
           "field": "trailingPE",
           "direction": "max",
           "format": "number",
-          "note": "Lower P/E relative to peers = better value",
+          "note": "Lower P/E = better value",
           "thresholds": [
             {"value": 15,     "score": 10},
             {"value": 25,     "score": 7},
@@ -142,18 +142,19 @@
             {"value": 999999, "score": 2}
           ]
         },
-        "peg_ratio": {
-          "label": "PEG Ratio",
+        "price_to_fcf": {
+          "label": "Price / Free Cash Flow",
           "max_score": 10,
           "source": "auto",
-          "field": "trailingPegRatio",
+          "field": "price_to_fcf",
           "direction": "max",
           "format": "number",
-          "note": "PEG < 1 is undervalued. Lower is better.",
+          "note": "Lower P/FCF = better value. < 20 is attractive.",
           "thresholds": [
-            {"value": 1,      "score": 10},
-            {"value": 2,      "score": 7},
-            {"value": 999999, "score": 3}
+            {"value": 20,     "score": 10},
+            {"value": 30,     "score": 7},
+            {"value": 50,     "score": 4},
+            {"value": 999999, "score": 2}
           ]
         }
       }
@@ -163,7 +164,7 @@
       "max_score": 10,
       "metrics": {
         "capital_allocation": {
-          "label": "Capital Allocation",
+          "label": "Capital Allocation (ROE)",
           "max_score": 5,
           "source": "auto",
           "field": "capital_allocation_proxy",
@@ -176,18 +177,18 @@
             {"value": -999, "score": 1}
           ]
         },
-        "transparency": {
-          "label": "Transparency / Track Record",
+        "roic": {
+          "label": "Return on Invested Capital (ROIC)",
           "max_score": 5,
           "source": "auto",
-          "field": "analyst_coverage",
+          "field": "roic",
           "direction": "min",
-          "format": "number",
-          "note": "Proxy: number of analyst opinions. More coverage = more scrutiny = more transparent.",
+          "format": "percent",
+          "note": "ROIC measures how efficiently management deploys capital. 0.20 = 20%.",
           "thresholds": [
-            {"value": 20,   "score": 5},
-            {"value": 10,   "score": 3},
-            {"value": 0,    "score": 1}
+            {"value": 0.20, "score": 5},
+            {"value": 0.10, "score": 3},
+            {"value": -999, "score": 1}
           ]
         }
       }
