@@ -8,6 +8,8 @@ FMP_BASE = "https://financialmodelingprep.com"
 
 
 def _get(path: str, **params) -> Union[dict, list]:
+    if not settings.fmp_api_key:
+        raise RuntimeError("FMP_API_KEY environment variable is not set.")
     params["apikey"] = settings.fmp_api_key
     resp = requests.get(f"{FMP_BASE}{path}", params=params, timeout=15)
     if resp.status_code == 404:

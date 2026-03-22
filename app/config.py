@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    fmp_api_key: str
+    fmp_api_key: Optional[str] = None   # Required at runtime — set FMP_API_KEY in Railway
     cache_ttl_seconds: int = 21600           # 6 hours
     cerbyfi_api_key: Optional[str] = None    # Client auth key — set in Railway env vars
     allowed_origins: str = "http://localhost:3000,http://localhost:8000"
