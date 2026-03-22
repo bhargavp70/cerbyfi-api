@@ -36,6 +36,15 @@
     </form>
   </div>
 
+  <!-- Watchlist -->
+  <div id="watchlist-section" style="display:none;">
+    <div class="watchlist-header">
+      <span class="watchlist-title">Watchlist</span>
+      <button id="clear-watchlist-btn" class="wl-clear-btn">Clear all</button>
+    </div>
+    <div id="watchlist-grid"></div>
+  </div>
+
   <!-- Error -->
   <div id="error-section">
     <strong>Error</strong> — <span id="error-msg"></span>
@@ -51,7 +60,10 @@
           <span class="result-ticker" id="result-ticker"></span>
           <span class="result-ticker" id="result-type-badge"></span>
         </div>
-        <span class="cached-badge" id="cached-badge" style="display:none"></span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="cached-badge" id="cached-badge" style="display:none"></span>
+          <button id="watchlist-btn" class="wl-toggle-btn"></button>
+        </div>
       </div>
 
       <div class="score-row">

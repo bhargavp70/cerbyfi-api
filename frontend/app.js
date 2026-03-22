@@ -3,15 +3,112 @@ const API_BASE = "";
 // Injected at build time by the server or set here for the web client
 const API_KEY  = window.CERBYFI_API_KEY || "";
 
-const state = { mode: "stock" };
+const state = { mode: "stock", lastData: null };
 
 // ── DOM refs ──────────────────────────────────────────────
-const form          = document.getElementById("search-form");
-const tickerInput   = document.getElementById("ticker-input");
-const analyzeBtn    = document.getElementById("analyze-btn");
-const errorSection  = document.getElementById("error-section");
-const errorMsg      = document.getElementById("error-msg");
+const form           = document.getElementById("search-form");
+const tickerInput    = document.getElementById("ticker-input");
+const analyzeBtn     = document.getElementById("analyze-btn");
+const errorSection   = document.getElementById("error-section");
+const errorMsg       = document.getElementById("error-msg");
 const resultsSection = document.getElementById("results-section");
+const watchlistBtn   = document.getElementById("watchlist-btn");
+
+// ── Watchlist persistence ──────────────────────────────────
+const WL_KEY = "cerbyfi_watchlist";
+
+function loadWatchlist() {
+  try { return JSON.parse(localStorage.getItem(WL_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function saveWatchlist(list) {
+  localStorage.setItem(WL_KEY, JSON.stringify(list));
+}
+
+function isInWatchlist(ticker) {
+  return loadWatchlist().some(i => i.ticker === ticker);
+}
+
+function addToWatchlist(ticker, mode, data) {
+  const list = loadWatchlist().filter(i => i.ticker !== ticker);
+  list.unshift({
+    ticker,
+    mode,
+    name:   data.name,
+    score:  data.total,
+    max:    data.max_total,
+    pct:    data.pct,
+    stars:  data.stars,
+    rating: data.rating_label,
+    saved_at: new Date().toISOString(),
+  });
+  saveWatchlist(list);
+  renderWatchlist();
+  updateWatchlistBtn(ticker);
+}
+
+function removeFromWatchlist(ticker) {
+  saveWatchlist(loadWatchlist().filter(i => i.ticker !== ticker));
+  renderWatchlist();
+  updateWatchlistBtn(ticker);
+}
+
+function updateWatchlistBtn(ticker) {
+  const inList = isInWatchlist(ticker);
+  watchlistBtn.textContent = inList ? "✓ In Watchlist" : "+ Watchlist";
+  watchlistBtn.className = "wl-toggle-btn" + (inList ? " in-list" : "");
+}
+
+function renderWatchlist() {
+  const list = loadWatchlist();
+  const section = document.getElementById("watchlist-section");
+  const grid    = document.getElementById("watchlist-grid");
+
+  if (!list.length) { section.style.display = "none"; return; }
+
+  section.style.display = "block";
+  grid.className = "watchlist-grid";
+  grid.innerHTML = "";
+
+  list.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "wl-card";
+    card.innerHTML = `
+      <div class="wl-card-top">
+        <span class="wl-card-name" title="${item.name}">${item.name}</span>
+        <button class="wl-remove-btn" data-ticker="${item.ticker}" title="Remove">✕</button>
+      </div>
+      <div class="wl-card-meta">
+        <span class="wl-ticker-badge">${item.ticker}</span>
+        <span class="wl-type-badge">${item.mode === "fund" ? "ETF" : "Stock"}</span>
+        <span class="wl-score-text" style="color:${scoreColor(item.pct)}">${item.score}/${item.max}</span>
+      </div>
+      <div class="wl-bar-track">
+        <div class="wl-bar-fill ${barColor(item.pct)}" style="width:${item.pct}%"></div>
+      </div>
+      <div class="wl-stars">${"★".repeat(item.stars)}${"☆".repeat(5 - item.stars)}</div>
+    `;
+
+    card.querySelector(".wl-remove-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeFromWatchlist(item.ticker);
+    });
+
+    card.addEventListener("click", () => {
+      state.mode = item.mode;
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mode === item.mode);
+      });
+      tickerInput.placeholder = item.mode === "stock"
+        ? "e.g. AAPL, NVDA, TSLA" : "e.g. SPY, QQQ, VTI";
+      tickerInput.value = item.ticker;
+      analyze(item.ticker, item.mode);
+    });
+
+    grid.appendChild(card);
+  });
+}
 
 // ── Tab switching ─────────────────────────────────────────
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -33,6 +130,24 @@ form.addEventListener("submit", async (e) => {
   await analyze(ticker, state.mode);
 });
 
+// ── Watchlist button ──────────────────────────────────────
+watchlistBtn.addEventListener("click", () => {
+  if (!state.lastData) return;
+  const { ticker, mode } = state.lastData;
+  if (isInWatchlist(ticker)) {
+    removeFromWatchlist(ticker);
+  } else {
+    addToWatchlist(ticker, mode, state.lastData);
+  }
+});
+
+// ── Clear watchlist ───────────────────────────────────────
+document.getElementById("clear-watchlist-btn").addEventListener("click", () => {
+  saveWatchlist([]);
+  renderWatchlist();
+  if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
+});
+
 async function analyze(ticker, mode) {
   setLoading(true);
   hideAll();
@@ -45,7 +160,9 @@ async function analyze(ticker, mode) {
     if (!res.ok) {
       showError(ticker, data.detail || "Unknown error");
     } else {
+      state.lastData = { ...data, mode };
       renderResults(data);
+      updateWatchlistBtn(ticker);
     }
   } catch (err) {
     showError(ticker, "Could not reach the server. Is it running?");
@@ -158,3 +275,6 @@ function setLoading(bool) {
   if (bool) analyzeBtn.textContent = "Analyzing";
   else analyzeBtn.textContent = "Analyze";
 }
+
+// ── Init ──────────────────────────────────────────────────
+renderWatchlist();

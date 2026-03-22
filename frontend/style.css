@@ -253,6 +253,145 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   background: var(--surface2);
 }
 
+/* ── Watchlist ── */
+#watchlist-section { margin-bottom: 28px; }
+
+.watchlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.watchlist-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.wl-clear-btn {
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.wl-clear-btn:hover { color: var(--red); }
+
+.watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.wl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 14px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.wl-card:hover { border-color: var(--accent); }
+
+.wl-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.wl-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+  padding-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wl-remove-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.wl-remove-btn:hover { color: var(--red); }
+
+.wl-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.wl-ticker-badge {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.wl-type-badge {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+.wl-score-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.wl-bar-track {
+  height: 5px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.wl-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.wl-bar-fill.green { background: var(--green); }
+.wl-bar-fill.amber { background: var(--amber); }
+.wl-bar-fill.red   { background: var(--red); }
+
+.wl-stars {
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  color: var(--amber);
+  margin-top: 7px;
+}
+
+/* Add/remove watchlist toggle button */
+.wl-toggle-btn {
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.wl-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+.wl-toggle-btn.in-list {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(74,222,128,0.08);
+}
+
 /* ── Footer ── */
 footer {
   text-align: center;
