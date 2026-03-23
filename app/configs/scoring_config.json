@@ -107,17 +107,17 @@
           ]
         },
         "revenue_growth_5y": {
-          "label": "Revenue Growth (5-Year)",
+          "label": "Revenue Growth (5-Year CAGR)",
           "max_score": 10,
           "source": "auto",
           "field": "revenue_growth_5y",
           "direction": "min",
           "format": "percent",
-          "note": "5-year cumulative revenue growth per share. 0.50 = 50% total growth.",
+          "note": "5-year annualised revenue growth (CAGR). 0.15 = 15% per year.",
           "thresholds": [
-            {"value": 0.50, "score": 10},
-            {"value": 0.25, "score": 7},
-            {"value": 0.05, "score": 4},
+            {"value": 0.15, "score": 10},
+            {"value": 0.08, "score": 7},
+            {"value": 0.02, "score": 4},
             {"value": -999, "score": 2}
           ]
         }

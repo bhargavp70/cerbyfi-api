@@ -4,10 +4,118 @@ import requests
 from typing import Union
 from app.config import settings
 
-FMP_BASE = "https://financialmodelingprep.com"
+FMP_BASE     = "https://financialmodelingprep.com"
+FINNHUB_BASE = "https://finnhub.io/api/v1"
 
 
-def _get(path: str, **params) -> Union[dict, list]:
+# ── Finnhub (stocks) ─────────────────────────────────────────────────────────
+
+def _fh_get(path: str, **params) -> dict:
+    if not settings.finnhub_api_key:
+        raise RuntimeError("FINNHUB_API_KEY environment variable is not set.")
+    params["token"] = settings.finnhub_api_key
+    resp = requests.get(f"{FINNHUB_BASE}{path}", params=params, timeout=15)
+    if resp.status_code == 403:
+        raise ValueError("This data requires a Finnhub premium plan.")
+    resp.raise_for_status()
+    if not resp.content or not resp.content.strip():
+        return {}
+    return resp.json()
+
+
+def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
+    last_error = None
+    for attempt in range(retries):
+        try:
+            profile = _fh_get("/stock/profile2", symbol=ticker)
+            metrics = _fh_get("/stock/metric",   symbol=ticker, metric="all")
+
+            if not profile or not profile.get("name"):
+                raise ValueError(f"No data found for '{ticker}'. Check the ticker symbol.")
+            break
+        except ValueError:
+            raise  # wrong ticker or plan issue — don't retry
+        except Exception as e:
+            last_error = e
+            if attempt < retries - 1:
+                time.sleep(delay)
+    else:
+        raise RuntimeError(f"Could not fetch data for {ticker}. ({last_error})")
+
+    m = metrics.get("metric", {}) if isinstance(metrics, dict) else {}
+
+    def pct(val):
+        """Finnhub returns percentages (47.33 = 47.33%); convert to decimal for scoring."""
+        return val / 100.0 if val is not None else None
+
+    info = {
+        "symbol":   ticker.upper(),
+        "longName": profile.get("name", ticker.upper()),
+    }
+
+    # Revenue growth YoY
+    rev = pct(m.get("revenueGrowthTTMYoy"))
+    if rev is not None:
+        info["revenue_growth_yoy"] = rev
+
+    # EPS growth YoY
+    eps_g = pct(m.get("epsGrowthTTMYoy"))
+    if eps_g is not None:
+        info["eps_growth"] = eps_g
+
+    # 5-year revenue CAGR (annualised %)
+    rev5y = pct(m.get("revenueGrowth5Y"))
+    if rev5y is not None:
+        info["revenue_growth_5y"] = rev5y
+
+    # Operating margin
+    op = pct(m.get("operatingMarginTTM"))
+    if op is not None:
+        info["operatingMargins"] = op
+
+    # Moat proxy: gross margin + ROE (both in %, convert to decimal)
+    gm_raw  = m.get("grossMarginTTM")
+    roe_raw = m.get("roeTTM")
+    if gm_raw is not None:
+        gm = gm_raw / 100.0
+        if roe_raw is not None:
+            roe = roe_raw / 100.0
+            info["moat_proxy"] = (min(gm, 1.0) + min(max(roe, 0), 1.0)) / 2
+        else:
+            info["moat_proxy"] = min(gm, 1.0)
+
+    # Debt/Equity (Finnhub: actual ratio e.g. 1.35 → store as 135 to match threshold scale)
+    dte = m.get("totalDebt/totalEquityAnnual")
+    if dte is not None:
+        info["debtToEquity"] = dte * 100
+
+    # FCF margin — not available from Finnhub free plan (will score N/A)
+
+    # Capital allocation proxy (ROE as decimal)
+    if roe_raw is not None:
+        info["capital_allocation_proxy"] = roe_raw / 100.0
+
+    # ROIC — Finnhub provides ROI TTM as the closest proxy
+    roi = m.get("roiTTM")
+    if roi is not None:
+        info["roic"] = roi / 100.0
+
+    # P/E ratio
+    pe = m.get("peNormalizedAnnual")
+    if pe and pe > 0:
+        info["trailingPE"] = pe
+
+    # Price / Free Cash Flow
+    pfcf = m.get("pfcfShareTTM")
+    if pfcf is not None and pfcf > 0:
+        info["price_to_fcf"] = pfcf
+
+    return info
+
+
+# ── FMP (ETFs / funds) ───────────────────────────────────────────────────────
+
+def _fmp_get(path: str, **params) -> Union[dict, list]:
     if not settings.fmp_api_key:
         raise RuntimeError("FMP_API_KEY environment variable is not set.")
     params["apikey"] = settings.fmp_api_key
@@ -16,8 +124,8 @@ def _get(path: str, **params) -> Union[dict, list]:
         return {}
     if resp.status_code == 402:
         raise ValueError(
-            "This ticker requires an FMP paid plan. "
-            "The free plan supports a limited set of symbols (e.g. AAPL, MSFT, NVDA, TSLA, GOOGL, AMZN, META)."
+            "This ETF requires an FMP paid plan. "
+            "The free plan supports popular ETFs (e.g. SPY, QQQ, VTI, IVV, VOO)."
         )
     resp.raise_for_status()
     if not resp.content or not resp.content.strip():
@@ -28,105 +136,13 @@ def _get(path: str, **params) -> Union[dict, list]:
     return data
 
 
-def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
-    last_error = None
-    for attempt in range(retries):
-        try:
-            profile     = _get("/stable/profile",          symbol=ticker)
-            ratios      = _get("/stable/ratios-ttm",       symbol=ticker)
-            growth      = _get("/stable/financial-growth", symbol=ticker, limit=1)
-            key_metrics = _get("/stable/key-metrics-ttm",  symbol=ticker)
-
-            if not profile or not isinstance(profile, list) or not profile[0].get("companyName"):
-                raise ValueError(f"No data found for '{ticker}'. Check the ticker symbol.")
-            break
-        except ValueError:
-            raise  # Don't retry — wrong ticker or plan limitation
-        except Exception as e:
-            last_error = e
-            if attempt < retries - 1:
-                time.sleep(delay)
-    else:
-        raise RuntimeError(f"Could not fetch data for {ticker}. ({last_error})")
-
-    p  = profile[0]
-    r  = ratios[0]      if ratios and isinstance(ratios, list)      else {}
-    g  = growth[0]      if growth and isinstance(growth, list)       else {}
-    km = key_metrics[0] if key_metrics and isinstance(key_metrics, list) else {}
-
-    info = {
-        "symbol":   ticker.upper(),
-        "longName": p.get("companyName", ticker.upper()),
-    }
-
-    # Revenue growth (already decimal, e.g. 0.07 = 7%)
-    rev = g.get("revenueGrowth")
-    if rev is not None:
-        info["revenue_growth_yoy"] = rev
-
-    # EPS growth YoY
-    eps_g = g.get("epsgrowth")
-    if eps_g is not None:
-        info["eps_growth"] = eps_g
-
-    # 5-year revenue growth per share
-    rev5y = g.get("fiveYRevenueGrowthPerShare")
-    if rev5y is not None:
-        info["revenue_growth_5y"] = rev5y
-
-    # Operating margin
-    op = r.get("operatingProfitMarginTTM")
-    if op is not None:
-        info["operatingMargins"] = op
-
-    # Moat proxy: gross margin + ROE (ROE is now in key-metrics)
-    gm  = r.get("grossProfitMarginTTM")
-    roe = km.get("returnOnEquityTTM")
-    if gm is not None:
-        if roe is not None:
-            info["moat_proxy"] = (min(gm, 1.0) + min(max(roe, 0), 1.0)) / 2
-        else:
-            info["moat_proxy"] = min(gm, 1.0)
-
-    # Debt/Equity (field renamed in stable API)
-    dte = r.get("debtToEquityRatioTTM")
-    if dte is not None:
-        info["debtToEquity"] = dte * 100
-
-    # FCF margin (freeCashFlowPerShareTTM and revenuePerShareTTM now in ratios)
-    fcf_ps = r.get("freeCashFlowPerShareTTM")
-    rev_ps = r.get("revenuePerShareTTM")
-    if fcf_ps is not None and rev_ps and rev_ps > 0:
-        info["fcf_margin"] = fcf_ps / rev_ps
-
-    if roe is not None:
-        info["capital_allocation_proxy"] = roe
-
-    # ROIC
-    roic = km.get("returnOnInvestedCapitalTTM")
-    if roic is not None:
-        info["roic"] = roic
-
-    # PE / PEG (renamed in stable API)
-    pe = r.get("priceToEarningsRatioTTM")
-    if pe and pe > 0:
-        info["trailingPE"] = pe
-
-    # Price / Free Cash Flow
-    p_fcf = r.get("priceToFreeCashFlowRatioTTM")
-    if p_fcf is not None and p_fcf > 0:
-        info["price_to_fcf"] = p_fcf
-
-    return info
-
-
 def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     last_error = None
     for attempt in range(retries):
         try:
-            profile = _get("/stable/profile", symbol=ticker)
+            profile = _fmp_get("/stable/profile", symbol=ticker)
             # 800 trading days ≈ 3.2 years of daily closes
-            history = _get("/stable/historical-price-eod/light", symbol=ticker, limit=800)
+            history = _fmp_get("/stable/historical-price-eod/light", symbol=ticker, limit=800)
 
             if not profile or not isinstance(profile, list) or not profile[0].get("companyName"):
                 raise ValueError(
