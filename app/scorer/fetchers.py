@@ -1,13 +1,74 @@
 import math
 import time
 import requests
-from typing import Union
+from typing import Union, Optional
 from app.config import settings
 
-FMP_BASE     = "https://financialmodelingprep.com"
-FINNHUB_BASE = "https://finnhub.io/api/v1"
-YAHOO_BASE   = "https://query1.finance.yahoo.com"
+FMP_BASE      = "https://financialmodelingprep.com"
+FINNHUB_BASE  = "https://finnhub.io/api/v1"
+YAHOO_BASE    = "https://query1.finance.yahoo.com"
+YAHOO2_BASE   = "https://query2.finance.yahoo.com"
 YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+# ── Yahoo Finance crumb cache (for PE ratio lookups) ──────────────────────────
+_yf_crumb: dict = {"crumb": None, "cookies": None, "fetched_at": 0.0}
+_YF_CRUMB_TTL = 3600  # refresh crumb every hour
+
+
+def _get_yahoo_crumb() -> Optional[tuple]:
+    """Returns (crumb, cookies) for Yahoo Finance quoteSummary calls, cached 1h."""
+    now = time.time()
+    if _yf_crumb["crumb"] and now - _yf_crumb["fetched_at"] < _YF_CRUMB_TTL:
+        return _yf_crumb["crumb"], _yf_crumb["cookies"]
+    try:
+        # Step 1: get cookies
+        r1 = requests.get("https://fc.yahoo.com", headers=YAHOO_HEADERS, timeout=10)
+        cookies = r1.cookies
+        # Step 2: get crumb using those cookies
+        r2 = requests.get(
+            f"{YAHOO2_BASE}/v1/test/getcrumb",
+            headers=YAHOO_HEADERS,
+            cookies=cookies,
+            timeout=10,
+        )
+        crumb = r2.text.strip()
+        if crumb and len(crumb) < 50:
+            _yf_crumb["crumb"]      = crumb
+            _yf_crumb["cookies"]    = cookies
+            _yf_crumb["fetched_at"] = now
+            return crumb, cookies
+    except Exception:
+        pass
+    return None, None
+
+
+def _yahoo_pe(ticker: str) -> Optional[float]:
+    """Fetch trailing P/E for an ETF from Yahoo Finance quoteSummary."""
+    crumb, cookies = _get_yahoo_crumb()
+    if not crumb:
+        return None
+    try:
+        resp = requests.get(
+            f"{YAHOO2_BASE}/v10/finance/quoteSummary/{ticker}",
+            params={"modules": "summaryDetail", "crumb": crumb},
+            headers=YAHOO_HEADERS,
+            cookies=cookies,
+            timeout=15,
+        )
+        if not resp.ok:
+            return None
+        data = resp.json()
+        result = data.get("quoteSummary", {}).get("result")
+        if not result:
+            return None
+        pe = result[0].get("summaryDetail", {}).get("trailingPE")
+        if isinstance(pe, dict):
+            pe = pe.get("raw")
+        if pe and float(pe) > 0:
+            return float(pe)
+    except Exception:
+        pass
+    return None
 
 
 # ── Finnhub (stocks) ─────────────────────────────────────────────────────────
@@ -205,13 +266,18 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
         except (TypeError, ValueError):
             pass
 
-    # P/E ratio from FMP profile
-    pe = p.get("pe")
+    # P/E ratio — FMP profile has pe=null for most ETFs; use Yahoo Finance
+    pe = None
+    fmp_pe = p.get("pe")
     try:
-        if pe and float(pe) > 0:
-            result["trailingPE"] = float(pe)
+        if fmp_pe and float(fmp_pe) > 0:
+            pe = float(fmp_pe)
     except (TypeError, ValueError):
         pass
+    if pe is None:
+        pe = _yahoo_pe(ticker)
+    if pe:
+        result["trailingPE"] = pe
 
     # Dividend yield from lastDividend / price
     ld    = p.get("lastDividend")
