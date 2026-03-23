@@ -4,8 +4,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import stock, fund, analyze
-from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem
+from app.routers import stock, fund, analyze, user, watchlist_user
+from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem, StatsResponse
 from app.db import score_db
 from app.auth import require_api_key
 from app.config import settings
@@ -40,9 +40,11 @@ app.add_middleware(
 )
 
 # All /api/* routes require a valid X-API-Key header
-app.include_router(stock.router,   dependencies=[Depends(require_api_key)])
-app.include_router(fund.router,    dependencies=[Depends(require_api_key)])
-app.include_router(analyze.router, dependencies=[Depends(require_api_key)])
+app.include_router(stock.router,          dependencies=[Depends(require_api_key)])
+app.include_router(fund.router,           dependencies=[Depends(require_api_key)])
+app.include_router(analyze.router,        dependencies=[Depends(require_api_key)])
+app.include_router(user.router)           # no API key — public auth endpoints
+app.include_router(watchlist_user.router) # JWT-protected, no X-API-Key needed
 
 
 @app.get("/config.js", include_in_schema=False)
@@ -71,6 +73,11 @@ def cache_stats() -> CacheStatsResponse:
 def invalidate_cache(key: str) -> dict:
     evicted = score_db.invalidate(key)
     return {"evicted": evicted, "key": key}
+
+
+@app.get("/api/stats", response_model=StatsResponse, tags=["meta"])
+def global_stats() -> StatsResponse:
+    return StatsResponse(total_analyses=score_db.total_analyses())
 
 
 @app.get("/api/top", response_model=TopResponse, tags=["meta"])

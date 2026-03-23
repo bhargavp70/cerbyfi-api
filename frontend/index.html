@@ -9,9 +9,55 @@
 <body>
 
 <header>
-  <h1>Cerby<span>Fi</span></h1>
-  <p>AI-powered stock &amp; fund scoring — 100-point framework</p>
+  <div class="header-inner">
+    <div>
+      <h1>Cerby<span>Fi</span></h1>
+      <p>Stock &amp; fund scoring — 100-point framework &nbsp;·&nbsp; <span id="analysis-counter" class="counter-text"></span></p>
+    </div>
+    <div class="header-auth" id="header-auth">
+      <button class="auth-link" id="btn-open-login">Sign in</button>
+      <button class="auth-link primary" id="btn-open-register">Register</button>
+    </div>
+  </div>
 </header>
+
+<!-- Auth modal -->
+<div id="auth-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login">Sign in</button>
+      <button class="modal-tab" id="tab-register">Register</button>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" class="auth-form">
+      <label>Email
+        <input type="email" id="login-email" placeholder="you@example.com" required />
+      </label>
+      <label>Password
+        <input type="password" id="login-password" placeholder="Password" required />
+      </label>
+      <div id="login-error" class="form-error"></div>
+      <button type="submit" class="auth-submit" id="login-submit">Sign in</button>
+    </form>
+
+    <!-- Register form -->
+    <form id="register-form" class="auth-form" style="display:none;">
+      <label>Name
+        <input type="text" id="reg-name" placeholder="Your name" required />
+      </label>
+      <label>Email
+        <input type="email" id="reg-email" placeholder="you@example.com" required />
+      </label>
+      <label>Password
+        <input type="password" id="reg-password" placeholder="At least 6 characters" required />
+      </label>
+      <div id="reg-error" class="form-error"></div>
+      <button type="submit" class="auth-submit" id="reg-submit">Create account</button>
+    </form>
+  </div>
+</div>
 
 <main>
   <div class="layout">

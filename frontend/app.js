@@ -1,6 +1,4 @@
-// Relative URL — frontend is served by the same FastAPI server
 const API_BASE = "";
-// Injected at build time by the server or set here for the web client
 const API_KEY  = window.CERBYFI_API_KEY || "";
 
 const state = { lastData: null };
@@ -14,58 +12,231 @@ const errorMsg       = document.getElementById("error-msg");
 const resultsSection = document.getElementById("results-section");
 const watchlistBtn   = document.getElementById("watchlist-btn");
 
-// ── Watchlist persistence ──────────────────────────────────
-const WL_KEY = "cerbyfi_watchlist";
+// ── Auth state ────────────────────────────────────────────
+const auth = { token: null, user: null };
+const TOKEN_KEY = "cerbyfi_token";
 
-function loadWatchlist() {
+function apiHeaders(includeJson = false) {
+  const h = {};
+  if (API_KEY)    h["X-API-Key"]     = API_KEY;
+  if (auth.token) h["Authorization"] = `Bearer ${auth.token}`;
+  if (includeJson) h["Content-Type"] = "application/json";
+  return h;
+}
+
+async function initAuth() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  auth.token = token;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, { headers: apiHeaders() });
+    if (res.ok) {
+      auth.user = await res.json();
+      renderAuthState();
+      await syncWatchlist();
+    } else {
+      auth.token = null;
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } catch { auth.token = null; }
+}
+
+function renderAuthState() {
+  const el = document.getElementById("header-auth");
+  if (auth.user) {
+    el.innerHTML = `
+      <span class="auth-name">Hi, ${escHtml(auth.user.name)}</span>
+      <button class="auth-link" id="btn-signout">Sign out</button>
+    `;
+    document.getElementById("btn-signout").addEventListener("click", signOut);
+  } else {
+    el.innerHTML = `
+      <button class="auth-link" id="btn-open-login">Sign in</button>
+      <button class="auth-link primary" id="btn-open-register">Register</button>
+    `;
+    document.getElementById("btn-open-login").addEventListener("click", () => openModal("login"));
+    document.getElementById("btn-open-register").addEventListener("click", () => openModal("register"));
+  }
+}
+
+function signOut() {
+  auth.token = null;
+  auth.user  = null;
+  localStorage.removeItem(TOKEN_KEY);
+  renderAuthState();
+  // Fall back to localStorage watchlist
+  cachedWatchlist = loadLocalWatchlist();
+  renderWatchlist();
+  if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
+}
+
+// ── Auth modal ────────────────────────────────────────────
+const modal = document.getElementById("auth-modal");
+
+function openModal(tab = "login") {
+  modal.style.display = "flex";
+  switchModalTab(tab);
+}
+function closeModal() {
+  modal.style.display = "none";
+  document.getElementById("login-error").textContent = "";
+  document.getElementById("reg-error").textContent   = "";
+}
+
+document.getElementById("modal-close").addEventListener("click", closeModal);
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+document.getElementById("btn-open-login").addEventListener("click", () => openModal("login"));
+document.getElementById("btn-open-register").addEventListener("click", () => openModal("register"));
+
+document.getElementById("tab-login").addEventListener("click", () => switchModalTab("login"));
+document.getElementById("tab-register").addEventListener("click", () => switchModalTab("register"));
+
+function switchModalTab(tab) {
+  const isLogin = tab === "login";
+  document.getElementById("login-form").style.display    = isLogin ? "" : "none";
+  document.getElementById("register-form").style.display = isLogin ? "none" : "";
+  document.getElementById("tab-login").classList.toggle("active", isLogin);
+  document.getElementById("tab-register").classList.toggle("active", !isLogin);
+}
+
+document.getElementById("login-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const errEl  = document.getElementById("login-error");
+  const submit = document.getElementById("login-submit");
+  submit.disabled = true;
+  errEl.textContent = "";
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email:    document.getElementById("login-email").value,
+        password: document.getElementById("login-password").value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.detail || "Login failed."; return; }
+    auth.token = data.token;
+    auth.user  = data.user;
+    localStorage.setItem(TOKEN_KEY, data.token);
+    closeModal();
+    renderAuthState();
+    await syncWatchlist();
+    if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
+  } catch { errEl.textContent = "Could not reach server."; }
+  finally  { submit.disabled = false; }
+});
+
+document.getElementById("register-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const errEl  = document.getElementById("reg-error");
+  const submit = document.getElementById("reg-submit");
+  submit.disabled = true;
+  errEl.textContent = "";
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name:     document.getElementById("reg-name").value,
+        email:    document.getElementById("reg-email").value,
+        password: document.getElementById("reg-password").value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.detail || "Registration failed."; return; }
+    auth.token = data.token;
+    auth.user  = data.user;
+    localStorage.setItem(TOKEN_KEY, data.token);
+    closeModal();
+    renderAuthState();
+    await syncWatchlist();
+    if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
+  } catch { errEl.textContent = "Could not reach server."; }
+  finally  { submit.disabled = false; }
+});
+
+// ── Watchlist (server when logged in, localStorage otherwise) ──
+const WL_KEY = "cerbyfi_watchlist";
+let cachedWatchlist = [];
+
+function loadLocalWatchlist() {
   try { return JSON.parse(localStorage.getItem(WL_KEY) || "[]"); }
   catch { return []; }
 }
+function saveLocalWatchlist(list) {
+  localStorage.setItem(WL_KEY, JSON.stringify(list.slice(0, 10)));
+}
 
-function saveWatchlist(list) {
-  localStorage.setItem(WL_KEY, JSON.stringify(list));
+async function syncWatchlist() {
+  if (auth.token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/me/watchlist`, { headers: apiHeaders() });
+      if (res.ok) cachedWatchlist = await res.json();
+    } catch { cachedWatchlist = []; }
+  } else {
+    cachedWatchlist = loadLocalWatchlist();
+  }
+  renderWatchlist();
 }
 
 function isInWatchlist(ticker) {
-  return loadWatchlist().some(i => i.ticker === ticker);
+  return cachedWatchlist.some(i => i.ticker === ticker);
 }
 
-function addToWatchlist(ticker, mode, data) {
-  const list = loadWatchlist().filter(i => i.ticker !== ticker);
-  list.unshift({
+async function addToWatchlist(ticker, data) {
+  const item = {
     ticker,
-    mode: data.type,
-    name:   data.name,
-    score:  data.total,
-    max:    data.max_total,
-    pct:    data.pct,
-    stars:  data.stars,
-    rating: data.rating_label,
-    saved_at: new Date().toISOString(),
-  });
-  saveWatchlist(list);
-  renderWatchlist();
+    mode:      data.type,
+    name:      data.name,
+    score:     data.total,
+    max_score: data.max_total,
+    pct:       data.pct,
+    stars:     data.stars,
+    rating:    data.rating_label,
+  };
+  if (auth.token) {
+    await fetch(`${API_BASE}/api/me/watchlist`, {
+      method: "POST",
+      headers: apiHeaders(true),
+      body: JSON.stringify(item),
+    });
+    await syncWatchlist();
+  } else {
+    const list = loadLocalWatchlist().filter(i => i.ticker !== ticker);
+    list.unshift({ ...item, saved_at: new Date().toISOString() });
+    saveLocalWatchlist(list);
+    cachedWatchlist = loadLocalWatchlist();
+    renderWatchlist();
+  }
   updateWatchlistBtn(ticker);
 }
 
-function removeFromWatchlist(ticker) {
-  saveWatchlist(loadWatchlist().filter(i => i.ticker !== ticker));
-  renderWatchlist();
+async function removeFromWatchlist(ticker) {
+  if (auth.token) {
+    await fetch(`${API_BASE}/api/me/watchlist/${ticker}`, {
+      method: "DELETE",
+      headers: apiHeaders(),
+    });
+    await syncWatchlist();
+  } else {
+    saveLocalWatchlist(loadLocalWatchlist().filter(i => i.ticker !== ticker));
+    cachedWatchlist = loadLocalWatchlist();
+    renderWatchlist();
+  }
   updateWatchlistBtn(ticker);
 }
 
 function updateWatchlistBtn(ticker) {
   const inList = isInWatchlist(ticker);
   watchlistBtn.textContent = inList ? "✓ In Watchlist" : "+ Watchlist";
-  watchlistBtn.className = "wl-toggle-btn" + (inList ? " in-list" : "");
+  watchlistBtn.className   = "wl-toggle-btn" + (inList ? " in-list" : "");
 }
 
 function renderWatchlist() {
-  const full = loadWatchlist();
-  const list = full.slice(0, 10);
+  const list    = cachedWatchlist.slice(0, 10);
   const section = document.getElementById("watchlist-section");
   const grid    = document.getElementById("watchlist-grid");
-
   if (!list.length) { section.style.display = "none"; return; }
 
   section.style.display = "block";
@@ -77,36 +248,33 @@ function renderWatchlist() {
     card.className = "wl-card";
     card.innerHTML = `
       <div class="wl-card-top">
-        <span class="wl-card-name" title="${item.name}">${item.name}</span>
+        <span class="wl-card-name" title="${escHtml(item.name || item.ticker)}">${escHtml(item.name || item.ticker)}</span>
         <button class="wl-remove-btn" data-ticker="${item.ticker}" title="Remove">✕</button>
       </div>
       <div class="wl-card-meta">
         <span class="wl-ticker-badge">${item.ticker}</span>
         <span class="wl-type-badge">${item.mode === "fund" ? "ETF" : "Stock"}</span>
-        <span class="wl-score-text" style="color:${scoreColor(item.pct)}">${item.score}/${item.max}</span>
+        <span class="wl-score-text" style="color:${scoreColor(item.pct)}">${item.score}/${item.max_score}</span>
       </div>
       <div class="wl-bar-track">
         <div class="wl-bar-fill ${barColor(item.pct)}" style="width:${item.pct}%"></div>
       </div>
-      <div class="wl-stars">${"★".repeat(item.stars)}${"☆".repeat(5 - item.stars)}</div>
+      <div class="wl-stars">${"★".repeat(item.stars || 0)}${"☆".repeat(5 - (item.stars || 0))}</div>
     `;
-
-    card.querySelector(".wl-remove-btn").addEventListener("click", (e) => {
+    card.querySelector(".wl-remove-btn").addEventListener("click", e => {
       e.stopPropagation();
       removeFromWatchlist(item.ticker);
     });
-
     card.addEventListener("click", () => {
       tickerInput.value = item.ticker;
       analyze(item.ticker);
     });
-
     grid.appendChild(card);
   });
 }
 
 // ── Form submit ───────────────────────────────────────────
-form.addEventListener("submit", async (e) => {
+form.addEventListener("submit", async e => {
   e.preventDefault();
   const ticker = tickerInput.value.trim().toUpperCase();
   if (!ticker) return;
@@ -114,31 +282,40 @@ form.addEventListener("submit", async (e) => {
 });
 
 // ── Watchlist button ──────────────────────────────────────
-watchlistBtn.addEventListener("click", () => {
+watchlistBtn.addEventListener("click", async () => {
   if (!state.lastData) return;
-  const { ticker, type } = state.lastData;
+  const { ticker } = state.lastData;
   if (isInWatchlist(ticker)) {
-    removeFromWatchlist(ticker);
+    await removeFromWatchlist(ticker);
   } else {
-    addToWatchlist(ticker, type, state.lastData);
+    await addToWatchlist(ticker, state.lastData);
   }
 });
 
 // ── Clear watchlist ───────────────────────────────────────
-document.getElementById("clear-watchlist-btn").addEventListener("click", () => {
-  saveWatchlist([]);
+document.getElementById("clear-watchlist-btn").addEventListener("click", async () => {
+  if (auth.token) {
+    // Remove each item individually
+    for (const item of [...cachedWatchlist]) {
+      await fetch(`${API_BASE}/api/me/watchlist/${item.ticker}`, {
+        method: "DELETE", headers: apiHeaders(),
+      });
+    }
+    cachedWatchlist = [];
+  } else {
+    saveLocalWatchlist([]);
+    cachedWatchlist = [];
+  }
   renderWatchlist();
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
 });
 
+// ── Analyze ───────────────────────────────────────────────
 async function analyze(ticker) {
   setLoading(true);
   hideAll();
-
   try {
-    const res = await fetch(`${API_BASE}/api/analyze/${ticker}`, {
-      headers: API_KEY ? { "X-API-Key": API_KEY } : {},
-    });
+    const res = await fetch(`${API_BASE}/api/analyze/${ticker}`, { headers: apiHeaders() });
     const data = await res.json();
     if (!res.ok) {
       showError(ticker, data.detail || "Unknown error");
@@ -147,8 +324,9 @@ async function analyze(ticker) {
       renderResults(data);
       updateWatchlistBtn(ticker);
       loadTopTickers();
+      loadStats();
     }
-  } catch (err) {
+  } catch {
     showError(ticker, "Could not reach the server. Is it running?");
   } finally {
     setLoading(false);
@@ -157,7 +335,6 @@ async function analyze(ticker) {
 
 // ── Render results ────────────────────────────────────────
 function renderResults(data) {
-  // Header
   document.getElementById("result-name").textContent = data.name;
   document.getElementById("result-ticker").textContent = data.ticker;
   document.getElementById("result-type-badge").textContent =
@@ -165,37 +342,32 @@ function renderResults(data) {
 
   if (data.cached) {
     const d = new Date(data.fetched_at);
-    document.getElementById("cached-badge").textContent =
-      `Cached · ${d.toLocaleTimeString()}`;
+    document.getElementById("cached-badge").textContent = `Cached · ${d.toLocaleTimeString()}`;
     document.getElementById("cached-badge").style.display = "inline";
   } else {
     document.getElementById("cached-badge").style.display = "none";
   }
 
-  document.getElementById("score-big").textContent = data.total;
+  document.getElementById("score-big").textContent  = data.total;
   document.getElementById("score-denom").textContent = `/ ${data.max_total}`;
-  document.getElementById("stars-row").textContent = starsString(data.stars);
-  document.getElementById("rating-text").textContent = data.rating_label;
+  document.getElementById("stars-row").textContent   = starsString(data.stars);
+  document.getElementById("rating-text").textContent  = data.rating_label;
 
   const fill = document.getElementById("total-bar-fill");
   fill.style.width = `${data.pct}%`;
-  fill.className = `bar-fill ${barColor(data.pct)}`;
+  fill.className   = `bar-fill ${barColor(data.pct)}`;
 
-  // Categories
   const grid = document.getElementById("categories-grid");
   grid.innerHTML = "";
-  for (const [key, cat] of Object.entries(data.categories)) {
+  for (const cat of Object.values(data.categories)) {
     grid.appendChild(buildCategoryCard(cat));
   }
-
   resultsSection.style.display = "block";
 }
 
 function buildCategoryCard(cat) {
-  const pct = cat.pct;
   const card = document.createElement("div");
   card.className = "category-card";
-
   card.innerHTML = `
     <div class="category-header">
       <span class="category-label">${cat.label}</span>
@@ -203,7 +375,7 @@ function buildCategoryCard(cat) {
     </div>
     <div class="cat-bar-wrap">
       <div class="bar-track">
-        <div class="bar-fill ${barColor(pct)}" style="width:${pct}%"></div>
+        <div class="bar-fill ${barColor(cat.pct)}" style="width:${cat.pct}%"></div>
       </div>
     </div>
     <details class="metrics-detail">
@@ -216,66 +388,43 @@ function buildCategoryCard(cat) {
 
 function buildMetricsTable(metrics) {
   const rows = Object.values(metrics).map(m => {
-    const metricPct = m.max > 0 ? Math.round(m.score / m.max * 100) : 0;
+    const p = m.max > 0 ? Math.round(m.score / m.max * 100) : 0;
     return `<tr>
       <td>${m.label}</td>
       <td>${m.display}</td>
-      <td><span class="mini-score" style="color:${scoreColor(metricPct)}">${m.score}/${m.max}</span></td>
+      <td><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></td>
     </tr>`;
   }).join("");
   return `<table class="metrics-table"><tbody>${rows}</tbody></table>`;
 }
 
-// ── Helpers ───────────────────────────────────────────────
-function starsString(n) {
-  return "★".repeat(n) + "☆".repeat(5 - n);
-}
-
-function barColor(pct) {
-  if (pct >= 70) return "green";
-  if (pct >= 45) return "amber";
-  return "red";
-}
-
-function scoreColor(pct) {
-  if (pct >= 70) return "var(--green)";
-  if (pct >= 45) return "var(--amber)";
-  return "var(--red)";
-}
-
-function showError(ticker, msg) {
-  errorMsg.textContent = `${ticker}: ${msg}`;
-  errorSection.style.display = "block";
-}
-
-function hideAll() {
-  errorSection.style.display = "none";
-  resultsSection.style.display = "none";
-}
-
-function setLoading(bool) {
-  analyzeBtn.disabled = bool;
-  analyzeBtn.classList.toggle("loading", bool);
-  if (bool) analyzeBtn.textContent = "Analyzing";
-  else analyzeBtn.textContent = "Analyze";
+// ── Analysis counter ──────────────────────────────────────
+async function loadStats() {
+  try {
+    const res = await fetch(`${API_BASE}/api/stats`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const el = document.getElementById("analysis-counter");
+    if (data.total_analyses > 0) {
+      el.textContent = `${data.total_analyses.toLocaleString()} analyses run`;
+    }
+  } catch { /* silent */ }
 }
 
 // ── Most Searched ─────────────────────────────────────────
 async function loadTopTickers() {
   try {
-    const res = await fetch(`${API_BASE}/api/top`, {
-      headers: API_KEY ? { "X-API-Key": API_KEY } : {},
-    });
+    const res = await fetch(`${API_BASE}/api/top`, { headers: apiHeaders() });
     if (!res.ok) return;
     const data = await res.json();
-    renderTopList("top-stocks-list", data.stocks, "stock");
-    renderTopList("top-funds-list", data.funds, "fund");
+    renderTopList("top-stocks-list", data.stocks);
+    renderTopList("top-funds-list",  data.funds);
     const hasData = data.stocks.length > 0 || data.funds.length > 0;
     document.getElementById("top-section").style.display = hasData ? "block" : "none";
-  } catch { /* silently skip if server unreachable */ }
+  } catch { /* silent */ }
 }
 
-function renderTopList(listId, items, mode) {
+function renderTopList(listId, items) {
   const ul = document.getElementById(listId);
   ul.innerHTML = "";
   if (!items.length) {
@@ -300,6 +449,36 @@ function renderTopList(listId, items, mode) {
   });
 }
 
+// ── Helpers ───────────────────────────────────────────────
+function starsString(n) { return "★".repeat(n) + "☆".repeat(5 - n); }
+function barColor(pct)   { return pct >= 70 ? "green" : pct >= 45 ? "amber" : "red"; }
+function scoreColor(pct) {
+  return pct >= 70 ? "var(--green)" : pct >= 45 ? "var(--amber)" : "var(--red)";
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+                  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+function showError(ticker, msg) {
+  errorMsg.textContent = `${ticker}: ${msg}`;
+  errorSection.style.display = "block";
+}
+function hideAll() {
+  errorSection.style.display  = "none";
+  resultsSection.style.display = "none";
+}
+function setLoading(bool) {
+  analyzeBtn.disabled = bool;
+  analyzeBtn.classList.toggle("loading", bool);
+  analyzeBtn.textContent = bool ? "Analyzing" : "Analyze";
+}
+
 // ── Init ──────────────────────────────────────────────────
-renderWatchlist();
+initAuth().then(() => {
+  if (!auth.user) {
+    cachedWatchlist = loadLocalWatchlist();
+    renderWatchlist();
+  }
+});
 loadTopTickers();
+loadStats();

@@ -61,3 +61,7 @@ class TopItem(BaseModel):
 class TopResponse(BaseModel):
     stocks: List[TopItem]
     funds: List[TopItem]
+
+
+class StatsResponse(BaseModel):
+    total_analyses: int
