@@ -174,6 +174,11 @@ class ScoreDB:
             ).fetchone()
         return dict(row) if row else None
 
+    def count_users(self) -> int:
+        with self._lock:
+            row = self._conn.execute("SELECT COUNT(*) FROM users").fetchone()
+        return int(row[0])
+
     def get_user_by_id(self, user_id: str) -> Optional[dict]:
         with self._lock:
             row = self._conn.execute(

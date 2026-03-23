@@ -25,6 +25,24 @@
   </div>
 </header>
 
+<!-- Admin modal -->
+<div id="admin-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:400px;">
+    <button class="modal-close" id="admin-modal-close">✕</button>
+    <h3 style="margin-bottom:20px;font-size:1.1rem;">Admin Dashboard</h3>
+    <div id="admin-stats-content">
+      <div class="admin-stat-row">
+        <span class="admin-stat-label">Registered users</span>
+        <span class="admin-stat-value" id="admin-user-count">—</span>
+      </div>
+      <div class="admin-stat-row">
+        <span class="admin-stat-label">Total analyses</span>
+        <span class="admin-stat-value" id="admin-analyses-count">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Auth modal -->
 <div id="auth-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box">

@@ -44,11 +44,18 @@ async function initAuth() {
 function renderAuthState() {
   const el = document.getElementById("header-auth");
   if (auth.user) {
+    const adminBtn = auth.user.is_admin
+      ? `<button class="admin-badge" id="btn-admin">Admin</button>`
+      : "";
     el.innerHTML = `
       <span class="auth-name">Hi, ${escHtml(auth.user.name)}</span>
+      ${adminBtn}
       <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
       <button class="auth-link" id="btn-signout">Sign out</button>
     `;
+    if (auth.user.is_admin) {
+      document.getElementById("btn-admin").addEventListener("click", openAdminModal);
+    }
     document.getElementById("btn-signout").addEventListener("click", signOut);
   } else {
     el.innerHTML = `
@@ -160,6 +167,27 @@ document.getElementById("register-form").addEventListener("submit", async e => {
   } catch { errEl.textContent = "Could not reach server."; }
   finally  { submit.disabled = false; }
 });
+
+// ── Admin modal ───────────────────────────────────────────
+const adminModal = document.getElementById("admin-modal");
+document.getElementById("admin-modal-close").addEventListener("click", () => {
+  adminModal.style.display = "none";
+});
+adminModal.addEventListener("click", e => { if (e.target === adminModal) adminModal.style.display = "none"; });
+
+async function openAdminModal() {
+  document.getElementById("admin-user-count").textContent = "…";
+  document.getElementById("admin-analyses-count").textContent = "…";
+  adminModal.style.display = "flex";
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: apiHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById("admin-user-count").textContent = data.user_count.toLocaleString();
+      document.getElementById("admin-analyses-count").textContent = data.total_analyses.toLocaleString();
+    }
+  } catch { /* silent */ }
+}
 
 // ── Watchlist (requires account) ──────────────────────────
 let cachedWatchlist = [];

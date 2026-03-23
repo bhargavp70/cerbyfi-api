@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_days: int = 30
 
+    # Admins — comma-separated emails, overrideable via ADMIN_EMAILS env var
+    admin_emails: str = "bhargavp@hotmail.com"
+
+    @property
+    def admin_email_set(self) -> set:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

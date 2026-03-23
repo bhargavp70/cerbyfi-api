@@ -50,3 +50,13 @@ def optional_user(authorization: Optional[str] = Header(default=None)) -> Option
     if not authorization or not authorization.startswith("Bearer "):
         return None
     return decode_token(authorization[7:])
+
+
+def require_admin(authorization: Optional[str] = Header(default=None)) -> str:
+    """FastAPI dependency — requires valid Bearer JWT belonging to an admin user."""
+    from app.db import score_db  # avoid circular import at module level
+    user_id = require_user(authorization)
+    user = score_db.get_user_by_id(user_id)
+    if not user or user["email"] not in settings.admin_email_set:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return user_id
