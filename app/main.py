@@ -5,8 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.routers import stock, fund
-from app.models import HealthResponse, CacheStatsResponse
-from app.cache import score_cache
+from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem
+from app.db import score_db
 from app.auth import require_api_key
 from app.config import settings
 
@@ -63,13 +63,23 @@ def health() -> HealthResponse:
 @app.get("/api/cache/stats", response_model=CacheStatsResponse, tags=["meta"],
          dependencies=[Depends(require_api_key)])
 def cache_stats() -> CacheStatsResponse:
-    return CacheStatsResponse(**score_cache.stats())
+    return CacheStatsResponse(**score_db.stats())
 
 
 @app.delete("/api/cache/{key}", tags=["meta"], dependencies=[Depends(require_api_key)])
 def invalidate_cache(key: str) -> dict:
-    evicted = score_cache.invalidate(key)
+    evicted = score_db.invalidate(key)
     return {"evicted": evicted, "key": key}
+
+
+@app.get("/api/top", response_model=TopResponse, tags=["meta"])
+def top_tickers() -> TopResponse:
+    def to_items(rows: list) -> list:
+        return [TopItem(**r) for r in rows]
+    return TopResponse(
+        stocks=to_items(score_db.top_lookups("stock")),
+        funds=to_items(score_db.top_lookups("fund")),
+    )
 
 
 # Serve frontend — must be last so API routes take priority

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 
 class MetricResult(BaseModel):
@@ -46,3 +46,18 @@ class CacheStatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str
+
+
+class TopItem(BaseModel):
+    ticker: str
+    name: str
+    score: int
+    max_score: int
+    pct: float
+    stars: int
+    count: int
+
+
+class TopResponse(BaseModel):
+    stocks: List[TopItem]
+    funds: List[TopItem]

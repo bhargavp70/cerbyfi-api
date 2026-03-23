@@ -163,6 +163,7 @@ async function analyze(ticker, mode) {
       state.lastData = { ...data, mode };
       renderResults(data);
       updateWatchlistBtn(ticker);
+      loadTopTickers();
     }
   } catch (err) {
     showError(ticker, "Could not reach the server. Is it running?");
@@ -276,5 +277,52 @@ function setLoading(bool) {
   else analyzeBtn.textContent = "Analyze";
 }
 
+// ── Most Searched ─────────────────────────────────────────
+async function loadTopTickers() {
+  try {
+    const res = await fetch(`${API_BASE}/api/top`, {
+      headers: API_KEY ? { "X-API-Key": API_KEY } : {},
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    renderTopList("top-stocks-list", data.stocks, "stock");
+    renderTopList("top-funds-list", data.funds, "fund");
+    const hasData = data.stocks.length > 0 || data.funds.length > 0;
+    document.getElementById("top-section").style.display = hasData ? "block" : "none";
+  } catch { /* silently skip if server unreachable */ }
+}
+
+function renderTopList(listId, items, mode) {
+  const ul = document.getElementById(listId);
+  ul.innerHTML = "";
+  if (!items.length) {
+    ul.innerHTML = `<li class="top-item"><span class="top-name" style="color:var(--muted)">No data yet</span></li>`;
+    return;
+  }
+  items.forEach((item, i) => {
+    const li = document.createElement("li");
+    li.className = "top-item";
+    li.innerHTML = `
+      <span class="top-rank">${i + 1}</span>
+      <span class="top-ticker">${item.ticker}</span>
+      <span class="top-name">${item.name}</span>
+      <span class="top-score" style="color:${scoreColor(item.pct)}">${item.score}/${item.max_score}</span>
+      <span class="top-count">${item.count}×</span>
+    `;
+    li.addEventListener("click", () => {
+      state.mode = mode;
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mode === mode);
+      });
+      tickerInput.placeholder = mode === "stock"
+        ? "e.g. AAPL, NVDA, TSLA" : "e.g. SPY, QQQ, VTI";
+      tickerInput.value = item.ticker;
+      analyze(item.ticker, mode);
+    });
+    ul.appendChild(li);
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────
 renderWatchlist();
+loadTopTickers();

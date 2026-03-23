@@ -253,6 +253,81 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   background: var(--surface2);
 }
 
+/* ── Most Searched ── */
+#top-section { margin-bottom: 28px; }
+
+.top-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 520px) { .top-columns { grid-template-columns: 1fr; } }
+
+.top-col-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.top-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid var(--border);
+}
+.top-item:last-child { border-bottom: none; }
+.top-item:hover { background: var(--surface2); }
+
+.top-rank {
+  font-size: 0.7rem;
+  color: var(--muted);
+  width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.top-ticker {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 44px;
+  flex-shrink: 0;
+}
+.top-name {
+  font-size: 0.78rem;
+  color: var(--muted);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-score {
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.top-count {
+  font-size: 0.68rem;
+  color: var(--muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* ── Watchlist ── */
 #watchlist-section { margin-bottom: 28px; }
 
