@@ -50,6 +50,28 @@ CREATE TABLE IF NOT EXISTS watchlist (
     saved_at  REAL NOT NULL,
     PRIMARY KEY (user_id, ticker)
 );
+
+CREATE TABLE IF NOT EXISTS portfolios (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_holdings (
+    portfolio_id TEXT NOT NULL,
+    ticker       TEXT NOT NULL,
+    mode         TEXT NOT NULL,
+    name         TEXT,
+    score        INTEGER,
+    max_score    INTEGER,
+    pct_score    REAL,
+    stars        INTEGER,
+    allocation   REAL NOT NULL,
+    added_at     REAL NOT NULL,
+    PRIMARY KEY (portfolio_id, ticker)
+);
 """
 
 
@@ -196,6 +218,117 @@ class ScoreDB:
                 "SELECT 1 FROM watchlist WHERE user_id=? AND ticker=?", (user_id, ticker)
             ).fetchone()
         return row is not None
+
+    # ── Portfolios ───────────────────────────────────────────
+
+    def create_portfolio(self, portfolio_id: str, user_id: str, name: str) -> None:
+        now = time.time()
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO portfolios (id, user_id, name, created_at, updated_at) VALUES (?,?,?,?,?)",
+                (portfolio_id, user_id, name.strip(), now, now),
+            )
+            self._conn.commit()
+
+    def get_portfolios(self, user_id: str) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, name, created_at, updated_at FROM portfolios "
+                "WHERE user_id=? ORDER BY updated_at DESC",
+                (user_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_portfolio(self, portfolio_id: str, user_id: str) -> Optional[dict]:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, name, created_at, updated_at FROM portfolios "
+                "WHERE id=? AND user_id=?",
+                (portfolio_id, user_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def rename_portfolio(self, portfolio_id: str, user_id: str, name: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE portfolios SET name=?, updated_at=? WHERE id=? AND user_id=?",
+                (name.strip(), time.time(), portfolio_id, user_id),
+            )
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    def delete_portfolio(self, portfolio_id: str, user_id: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM portfolios WHERE id=? AND user_id=?",
+                (portfolio_id, user_id),
+            )
+            self._conn.execute(
+                "DELETE FROM portfolio_holdings WHERE portfolio_id=?", (portfolio_id,)
+            )
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    # ── Portfolio holdings ────────────────────────────────────
+
+    def get_holdings(self, portfolio_id: str) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at "
+                "FROM portfolio_holdings WHERE portfolio_id=? ORDER BY added_at ASC",
+                (portfolio_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def replace_holdings(self, portfolio_id: str, holdings: list) -> None:
+        now = time.time()
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM portfolio_holdings WHERE portfolio_id=?", (portfolio_id,)
+            )
+            self._conn.executemany(
+                "INSERT INTO portfolio_holdings "
+                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                [
+                    (portfolio_id, h["ticker"], h["mode"], h.get("name"),
+                     h.get("score"), h.get("max_score"), h.get("pct_score"),
+                     h.get("stars"), h["allocation"], now)
+                    for h in holdings
+                ],
+            )
+            self._conn.execute(
+                "UPDATE portfolios SET updated_at=? WHERE id=?", (now, portfolio_id)
+            )
+            self._conn.commit()
+
+    def upsert_holding(self, portfolio_id: str, holding: dict) -> None:
+        now = time.time()
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO portfolio_holdings "
+                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (portfolio_id, holding["ticker"], holding["mode"], holding.get("name"),
+                 holding.get("score"), holding.get("max_score"), holding.get("pct_score"),
+                 holding.get("stars"), holding["allocation"], now),
+            )
+            self._conn.execute(
+                "UPDATE portfolios SET updated_at=? WHERE id=?", (now, portfolio_id)
+            )
+            self._conn.commit()
+
+    def remove_holding(self, portfolio_id: str, ticker: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM portfolio_holdings WHERE portfolio_id=? AND ticker=?",
+                (portfolio_id, ticker),
+            )
+            self._conn.execute(
+                "UPDATE portfolios SET updated_at=? WHERE id=?", (time.time(), portfolio_id)
+            )
+            self._conn.commit()
+        return cur.rowcount > 0
 
 
 score_db = ScoreDB(db_path=settings.db_path, ttl_seconds=settings.cache_ttl_seconds)

@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import stock, fund, analyze, user, watchlist_user
+from app.routers import stock, fund, analyze, user, watchlist_user, portfolio
 from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem, StatsResponse
 from app.db import score_db
 from app.auth import require_api_key
@@ -35,7 +35,7 @@ _origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_methods=["GET", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -45,6 +45,7 @@ app.include_router(fund.router,           dependencies=[Depends(require_api_key)
 app.include_router(analyze.router,        dependencies=[Depends(require_api_key)])
 app.include_router(user.router)           # no API key — public auth endpoints
 app.include_router(watchlist_user.router) # JWT-protected, no X-API-Key needed
+app.include_router(portfolio.router)      # JWT-protected portfolio management
 
 
 @app.get("/config.js", include_in_schema=False)

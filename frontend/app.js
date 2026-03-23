@@ -68,6 +68,10 @@ function signOut() {
   cachedWatchlist = loadLocalWatchlist();
   renderWatchlist();
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
+  // Hide portfolio section
+  portfolioState.list = [];
+  portfolioState.activeId = null;
+  document.getElementById("portfolio-section").style.display = "none";
 }
 
 // ── Auth modal ────────────────────────────────────────────
@@ -174,6 +178,7 @@ async function syncWatchlist() {
       const res = await fetch(`${API_BASE}/api/me/watchlist`, { headers: apiHeaders() });
       if (res.ok) cachedWatchlist = await res.json();
     } catch { cachedWatchlist = []; }
+    await loadPortfolios();
   } else {
     cachedWatchlist = loadLocalWatchlist();
   }
@@ -363,6 +368,11 @@ function renderResults(data) {
     grid.appendChild(buildCategoryCard(cat));
   }
   resultsSection.style.display = "block";
+
+  // Refresh portfolio "add" button if a portfolio is open
+  if (auth.user && portfolioState.activeId) {
+    renderPortfolioDetail();
+  }
 }
 
 function buildCategoryCard(cat) {
@@ -482,3 +492,335 @@ initAuth().then(() => {
 });
 loadTopTickers();
 loadStats();
+
+// ── Portfolios ────────────────────────────────────────────
+const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false };
+
+async function loadPortfolios() {
+  if (!auth.token) {
+    document.getElementById("portfolio-section").style.display = "none";
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/me/portfolios`, { headers: apiHeaders() });
+    if (res.ok) {
+      portfolioState.list = await res.json();
+      renderPortfolioSection();
+    }
+  } catch { /* silent */ }
+}
+
+function renderPortfolioSection() {
+  const section = document.getElementById("portfolio-section");
+  section.style.display = "block";
+  if (portfolioState.activeId) {
+    renderPortfolioDetail();
+  } else {
+    renderPortfolioList();
+  }
+}
+
+function renderPortfolioList() {
+  document.getElementById("portfolio-list").style.display = "";
+  document.getElementById("portfolio-detail").style.display = "none";
+  const list = document.getElementById("portfolio-list");
+  list.innerHTML = "";
+  if (!portfolioState.list.length) {
+    list.innerHTML = `<div style="font-size:0.8rem;color:var(--muted);padding:8px 0;">No portfolios yet. Click + New to create one.</div>`;
+    return;
+  }
+  portfolioState.list.forEach(p => {
+    const agg = p.aggregate_score;
+    const pct = agg !== null ? agg : null;
+    const card = document.createElement("div");
+    card.className = "portfolio-card";
+    card.innerHTML = `
+      <div class="portfolio-card-header">
+        <span class="portfolio-card-name">${escHtml(p.name)}</span>
+        <button class="ph-remove" data-id="${p.id}" title="Delete">✕</button>
+      </div>
+      <div class="portfolio-card-meta">${p.holdings.length} holding${p.holdings.length !== 1 ? "s" : ""}</div>
+      ${pct !== null ? `
+        <div class="portfolio-card-score" style="color:${scoreColor(pct)}">Score: ${pct.toFixed(1)}</div>
+        <div class="wl-bar-track" style="margin-top:4px;">
+          <div class="wl-bar-fill ${barColor(pct)}" style="width:${pct}%"></div>
+        </div>` : '<div class="portfolio-card-meta">Add stocks to see score</div>'}
+    `;
+    card.querySelector(".ph-remove").addEventListener("click", async e => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${p.name}"?`)) return;
+      await fetch(`${API_BASE}/api/me/portfolios/${p.id}`, { method: "DELETE", headers: apiHeaders() });
+      await loadPortfolios();
+    });
+    card.addEventListener("click", () => openPortfolioDetail(p.id));
+    list.appendChild(card);
+  });
+}
+
+function openPortfolioDetail(id) {
+  portfolioState.activeId = id;
+  portfolioState.optimizeData = null;
+  portfolioState.editing = false;
+  renderPortfolioDetail();
+}
+
+function renderPortfolioDetail() {
+  document.getElementById("portfolio-list").style.display = "none";
+  document.getElementById("portfolio-detail").style.display = "";
+  document.getElementById("optimize-panel").style.display = "none";
+
+  const p = portfolioState.list.find(x => x.id === portfolioState.activeId);
+  if (!p) return;
+
+  document.getElementById("portfolio-detail-name").textContent = p.name;
+
+  const agg = p.aggregate_score;
+  document.getElementById("portfolio-agg-score").textContent = agg !== null ? agg.toFixed(1) : "—";
+  const bar = document.getElementById("portfolio-agg-bar");
+  bar.style.width = agg !== null ? `${agg}%` : "0%";
+  bar.className = `wl-bar-fill ${agg !== null ? barColor(agg) : ""}`;
+
+  // Holdings list
+  const holdingsEl = document.getElementById("portfolio-holdings-list");
+  holdingsEl.innerHTML = "";
+  if (!p.holdings.length) {
+    holdingsEl.innerHTML = `<div style="font-size:0.8rem;color:var(--muted);padding:8px 0;">No holdings. Analyze a stock/ETF then click "+ Add to Portfolio".</div>`;
+  }
+
+  if (portfolioState.editing) {
+    renderAllocationEditor(p);
+  } else {
+    p.holdings.forEach(h => {
+      const row = document.createElement("div");
+      row.className = "portfolio-holding-row";
+      const hPct = h.pct_score;
+      row.innerHTML = `
+        <span class="ph-ticker">${h.ticker}</span>
+        <span class="ph-name">${escHtml(h.name || "")}</span>
+        <span class="ph-alloc">${h.allocation.toFixed(0)}%</span>
+        <span class="ph-score" style="color:${hPct !== null ? scoreColor(hPct) : 'var(--muted)'}">
+          ${hPct !== null ? hPct.toFixed(0) : "N/A"}
+        </span>
+        <button class="ph-remove" data-ticker="${h.ticker}">✕</button>
+      `;
+      row.querySelector(".ph-remove").addEventListener("click", async () => {
+        await fetch(`${API_BASE}/api/me/portfolios/${p.id}/holdings/${h.ticker}`, {
+          method: "DELETE", headers: apiHeaders(),
+        });
+        await loadPortfolios();
+        openPortfolioDetail(p.id);
+      });
+      holdingsEl.appendChild(row);
+    });
+
+    if (p.holdings.length > 1) {
+      // Edit allocations button row
+      const editRow = document.createElement("div");
+      editRow.style.cssText = "margin-top:8px;";
+      editRow.innerHTML = `<button class="wl-toggle-btn" id="edit-alloc-btn" style="width:100%;font-size:0.8rem;">Edit allocations</button>`;
+      editRow.querySelector("#edit-alloc-btn").addEventListener("click", () => {
+        portfolioState.editing = true;
+        renderPortfolioDetail();
+      });
+      holdingsEl.appendChild(editRow);
+    }
+  }
+
+  // "Add current to portfolio" button
+  const addBtn = document.getElementById("portfolio-add-current-btn");
+  if (state.lastData && !p.holdings.find(h => h.ticker === state.lastData.ticker)) {
+    addBtn.style.display = "";
+    addBtn.textContent = `+ Add ${state.lastData.ticker} to this portfolio`;
+    addBtn.onclick = () => addCurrentToPortfolio(p.id);
+  } else {
+    addBtn.style.display = "none";
+  }
+}
+
+function renderAllocationEditor(p) {
+  const holdingsEl = document.getElementById("portfolio-holdings-list");
+  holdingsEl.innerHTML = "";
+
+  const inputs = {};
+  p.holdings.forEach(h => {
+    const row = document.createElement("div");
+    row.className = "portfolio-holding-row";
+    row.innerHTML = `
+      <span class="ph-ticker">${h.ticker}</span>
+      <span class="ph-name">${escHtml(h.name || "")}</span>
+      <input type="number" class="alloc-input" min="1" max="99" step="1" value="${h.allocation.toFixed(0)}" data-ticker="${h.ticker}" />
+      <span style="font-size:0.78rem;color:var(--muted);">%</span>
+    `;
+    holdingsEl.appendChild(row);
+    inputs[h.ticker] = row.querySelector("input");
+  });
+
+  // Sum hint
+  const hint = document.createElement("div");
+  hint.id = "alloc-sum-hint";
+  hint.className = "alloc-sum-hint";
+  holdingsEl.appendChild(hint);
+
+  const updateHint = () => {
+    const sum = Object.values(inputs).reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
+    hint.textContent = `Total: ${sum.toFixed(0)}% ${sum === 100 ? "✓" : "(must equal 100)"}`;
+    hint.className = `alloc-sum-hint ${Math.abs(sum - 100) < 0.5 ? "alloc-sum-ok" : "alloc-sum-err"}`;
+  };
+  Object.values(inputs).forEach(el => el.addEventListener("input", updateHint));
+  updateHint();
+
+  // Save / Cancel
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;gap:6px;margin-top:8px;";
+  actions.innerHTML = `
+    <button id="save-alloc-btn" class="auth-submit" style="flex:1;padding:8px;font-size:0.82rem;">Save</button>
+    <button id="cancel-alloc-btn" class="wl-clear-btn">Cancel</button>
+  `;
+  holdingsEl.appendChild(actions);
+
+  actions.querySelector("#cancel-alloc-btn").addEventListener("click", () => {
+    portfolioState.editing = false;
+    renderPortfolioDetail();
+  });
+  actions.querySelector("#save-alloc-btn").addEventListener("click", async () => {
+    const sum = Object.values(inputs).reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
+    if (Math.abs(sum - 100) > 0.5) {
+      hint.textContent = `Total must be 100. Currently ${sum.toFixed(1)}%.`;
+      hint.className = "alloc-sum-hint alloc-sum-err";
+      return;
+    }
+    const updated = p.holdings.map(h => ({
+      ...h,
+      allocation: parseFloat(inputs[h.ticker].value) || h.allocation,
+    }));
+    await saveAllocations(p.id, updated);
+  });
+}
+
+async function saveAllocations(portfolioId, holdings) {
+  const res = await fetch(`${API_BASE}/api/me/portfolios/${portfolioId}/holdings`, {
+    method: "PUT",
+    headers: apiHeaders(true),
+    body: JSON.stringify({ holdings }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    alert(err.detail || "Failed to save.");
+    return;
+  }
+  portfolioState.editing = false;
+  document.getElementById("optimize-panel").style.display = "none";
+  await loadPortfolios();
+  openPortfolioDetail(portfolioId);
+}
+
+async function addCurrentToPortfolio(portfolioId) {
+  if (!state.lastData) return;
+  const p = portfolioState.list.find(x => x.id === portfolioId);
+  if (!p) return;
+
+  const d = state.lastData;
+  const newHolding = {
+    ticker:    d.ticker,
+    mode:      d.type,
+    name:      d.name,
+    score:     d.total,
+    max_score: d.max_total,
+    pct_score: d.pct,
+    stars:     d.stars,
+    allocation: 0,
+  };
+
+  // Add with 0% allocation, then immediately open allocation editor
+  const existingAllocSum = p.holdings.reduce((s, h) => s + h.allocation, 0);
+  const suggestedAlloc = Math.max(0, 100 - existingAllocSum);
+  newHolding.allocation = suggestedAlloc;
+
+  const updatedHoldings = [...p.holdings, newHolding];
+  // Normalize so total = 100 (reduce existing proportionally if needed)
+  const total = updatedHoldings.reduce((s, h) => s + h.allocation, 0);
+  if (total !== 100 && total > 0) {
+    updatedHoldings.forEach(h => { h.allocation = parseFloat((h.allocation / total * 100).toFixed(1)); });
+    // fix rounding
+    const diff = parseFloat((100 - updatedHoldings.reduce((s,h) => s + h.allocation, 0)).toFixed(1));
+    updatedHoldings[0].allocation += diff;
+  }
+
+  await saveAllocations(portfolioId, updatedHoldings);
+  portfolioState.editing = true;
+  renderPortfolioDetail();
+}
+
+document.getElementById("new-portfolio-btn").addEventListener("click", async () => {
+  const name = prompt("Portfolio name:");
+  if (!name || !name.trim()) return;
+  const res = await fetch(`${API_BASE}/api/me/portfolios`, {
+    method: "POST",
+    headers: apiHeaders(true),
+    body: JSON.stringify({ name: name.trim() }),
+  });
+  if (res.ok) {
+    const p = await res.json();
+    await loadPortfolios();
+    openPortfolioDetail(p.id);
+  }
+});
+
+document.getElementById("portfolio-back-btn").addEventListener("click", () => {
+  portfolioState.activeId = null;
+  portfolioState.optimizeData = null;
+  portfolioState.editing = false;
+  renderPortfolioSection();
+});
+
+document.getElementById("delete-portfolio-btn").addEventListener("click", async () => {
+  const p = portfolioState.list.find(x => x.id === portfolioState.activeId);
+  if (!p || !confirm(`Delete "${p.name}"?`)) return;
+  await fetch(`${API_BASE}/api/me/portfolios/${p.id}`, { method: "DELETE", headers: apiHeaders() });
+  portfolioState.activeId = null;
+  await loadPortfolios();
+});
+
+document.getElementById("optimize-btn").addEventListener("click", async () => {
+  const panel = document.getElementById("optimize-panel");
+  if (panel.style.display !== "none") { panel.style.display = "none"; return; }
+
+  const res = await fetch(`${API_BASE}/api/me/portfolios/${portfolioState.activeId}/optimize`, {
+    headers: apiHeaders(),
+  });
+  if (!res.ok) { alert((await res.json()).detail || "Could not optimize."); return; }
+  const data = await res.json();
+  portfolioState.optimizeData = data;
+
+  document.getElementById("opt-current-score").textContent = data.current_score.toFixed(1);
+  document.getElementById("opt-new-score").textContent     = data.optimized_score.toFixed(1);
+
+  const rows = document.getElementById("optimize-rows");
+  rows.innerHTML = "";
+  data.holdings.forEach(h => {
+    const row = document.createElement("div");
+    row.className = "optimize-row";
+    row.innerHTML = `
+      <span class="opt-ticker">${h.ticker}</span>
+      <span class="ph-name" style="flex:1;">${escHtml(h.name || "")}</span>
+      <span class="opt-current">${h.current_allocation.toFixed(0)}%</span>
+      <span class="opt-arrow-sm">→</span>
+      <span class="opt-new">${h.optimized_allocation.toFixed(0)}%</span>
+    `;
+    rows.appendChild(row);
+  });
+  panel.style.display = "";
+});
+
+document.getElementById("apply-optimize-btn").addEventListener("click", async () => {
+  const data = portfolioState.optimizeData;
+  if (!data) return;
+  const p = portfolioState.list.find(x => x.id === portfolioState.activeId);
+  if (!p) return;
+  const updated = p.holdings.map(h => {
+    const opt = data.holdings.find(o => o.ticker === h.ticker);
+    return { ...h, allocation: opt ? opt.optimized_allocation : h.allocation };
+  });
+  await saveAllocations(portfolioState.activeId, updated);
+});
+

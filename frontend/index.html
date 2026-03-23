@@ -77,6 +77,59 @@
         <div id="watchlist-grid"></div>
       </div>
 
+      <!-- Portfolios (logged-in only) -->
+      <div id="portfolio-section" style="display:none;">
+        <div class="watchlist-header">
+          <span class="watchlist-title">Portfolios</span>
+          <button id="new-portfolio-btn" class="wl-clear-btn accent-btn">+ New</button>
+        </div>
+
+        <!-- List of portfolios -->
+        <div id="portfolio-list"></div>
+
+        <!-- Portfolio detail (replaces list when open) -->
+        <div id="portfolio-detail" style="display:none;">
+          <div class="watchlist-header" style="margin-bottom:8px;">
+            <button id="portfolio-back-btn" class="wl-clear-btn">← Back</button>
+            <span id="portfolio-detail-name" class="watchlist-title" style="flex:1;text-align:right;"></span>
+          </div>
+
+          <div class="portfolio-score-row">
+            <span class="portfolio-score-label">Portfolio Score</span>
+            <span id="portfolio-agg-score" class="portfolio-score-value">—</span>
+          </div>
+          <div class="wl-bar-track" style="margin-bottom:12px;">
+            <div id="portfolio-agg-bar" class="wl-bar-fill" style="width:0%"></div>
+          </div>
+
+          <div id="portfolio-holdings-list"></div>
+
+          <button id="portfolio-add-current-btn" class="auth-link" style="display:none;width:100%;margin:8px 0;font-size:0.8rem;"></button>
+
+          <!-- Optimize panel -->
+          <div id="optimize-panel" style="display:none;">
+            <div class="optimize-score-compare">
+              <div class="opt-score-box">
+                <div class="opt-score-label">Current</div>
+                <div id="opt-current-score" class="opt-score-num"></div>
+              </div>
+              <div class="opt-arrow">→</div>
+              <div class="opt-score-box">
+                <div class="opt-score-label">Optimized</div>
+                <div id="opt-new-score" class="opt-score-num green"></div>
+              </div>
+            </div>
+            <div id="optimize-rows"></div>
+            <button id="apply-optimize-btn" class="auth-submit" style="width:100%;padding:8px;margin-top:8px;">Apply Allocation</button>
+          </div>
+
+          <div style="display:flex;gap:6px;margin-top:10px;">
+            <button id="optimize-btn" class="wl-toggle-btn" style="flex:1;">Optimize</button>
+            <button id="delete-portfolio-btn" class="wl-toggle-btn" style="flex:1;color:var(--red);">Delete</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Most Searched -->
       <div id="top-section" style="display:none;">
         <div class="watchlist-header">

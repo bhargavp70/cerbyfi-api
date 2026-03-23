@@ -65,3 +65,53 @@ class TopResponse(BaseModel):
 
 class StatsResponse(BaseModel):
     total_analyses: int
+
+
+# ── Portfolio models ──────────────────────────────────────
+
+class HoldingIn(BaseModel):
+    ticker: str
+    mode: str
+    name: Optional[str] = None
+    score: Optional[int] = None
+    max_score: Optional[int] = None
+    pct_score: Optional[float] = None
+    stars: Optional[int] = None
+    allocation: float  # 0.0 – 100.0
+
+
+class HoldingOut(BaseModel):
+    ticker: str
+    mode: str
+    name: Optional[str]
+    score: Optional[int]
+    max_score: Optional[int]
+    pct_score: Optional[float]
+    stars: Optional[int]
+    allocation: float
+
+
+class HoldingsIn(BaseModel):
+    holdings: List[HoldingIn]
+
+
+class PortfolioOut(BaseModel):
+    id: str
+    name: str
+    created_at: float
+    updated_at: float
+    holdings: List[HoldingOut]
+    aggregate_score: Optional[float]
+
+
+class OptimizedHolding(BaseModel):
+    ticker: str
+    name: Optional[str]
+    current_allocation: float
+    optimized_allocation: float
+
+
+class OptimizeResponse(BaseModel):
+    current_score: float
+    optimized_score: float
+    holdings: List[OptimizedHolding]
