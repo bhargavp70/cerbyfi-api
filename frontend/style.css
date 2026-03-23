@@ -38,6 +38,15 @@ header {
   gap: 16px;
   flex-wrap: wrap;
 }
+.header-brand { display: flex; align-items: center; gap: 14px; }
+.header-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
 header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
 header h1 span { color: var(--accent); }
 header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
