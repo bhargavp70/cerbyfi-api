@@ -66,8 +66,7 @@ function signOut() {
   auth.user  = null;
   localStorage.removeItem(TOKEN_KEY);
   renderAuthState();
-  // Fall back to localStorage watchlist
-  cachedWatchlist = loadLocalWatchlist();
+  cachedWatchlist = [];
   renderWatchlist();
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
   // Hide portfolio section
@@ -162,17 +161,8 @@ document.getElementById("register-form").addEventListener("submit", async e => {
   finally  { submit.disabled = false; }
 });
 
-// ── Watchlist (server when logged in, localStorage otherwise) ──
-const WL_KEY = "cerbyfi_watchlist";
+// ── Watchlist (requires account) ──────────────────────────
 let cachedWatchlist = [];
-
-function loadLocalWatchlist() {
-  try { return JSON.parse(localStorage.getItem(WL_KEY) || "[]"); }
-  catch { return []; }
-}
-function saveLocalWatchlist(list) {
-  localStorage.setItem(WL_KEY, JSON.stringify(list.slice(0, 10)));
-}
 
 async function syncWatchlist() {
   if (auth.token) {
@@ -182,7 +172,7 @@ async function syncWatchlist() {
     } catch { cachedWatchlist = []; }
     await loadPortfolios();
   } else {
-    cachedWatchlist = loadLocalWatchlist();
+    cachedWatchlist = [];
   }
   renderWatchlist();
 }
@@ -192,6 +182,7 @@ function isInWatchlist(ticker) {
 }
 
 async function addToWatchlist(ticker, data) {
+  if (!auth.token) { openModal("login"); return; }
   const item = {
     ticker,
     mode:      data.type,
@@ -202,39 +193,31 @@ async function addToWatchlist(ticker, data) {
     stars:     data.stars,
     rating:    data.rating_label,
   };
-  if (auth.token) {
-    await fetch(`${API_BASE}/api/me/watchlist`, {
-      method: "POST",
-      headers: apiHeaders(true),
-      body: JSON.stringify(item),
-    });
-    await syncWatchlist();
-  } else {
-    const list = loadLocalWatchlist().filter(i => i.ticker !== ticker);
-    list.unshift({ ...item, saved_at: new Date().toISOString() });
-    saveLocalWatchlist(list);
-    cachedWatchlist = loadLocalWatchlist();
-    renderWatchlist();
-  }
+  await fetch(`${API_BASE}/api/me/watchlist`, {
+    method: "POST",
+    headers: apiHeaders(true),
+    body: JSON.stringify(item),
+  });
+  await syncWatchlist();
   updateWatchlistBtn(ticker);
 }
 
 async function removeFromWatchlist(ticker) {
-  if (auth.token) {
-    await fetch(`${API_BASE}/api/me/watchlist/${ticker}`, {
-      method: "DELETE",
-      headers: apiHeaders(),
-    });
-    await syncWatchlist();
-  } else {
-    saveLocalWatchlist(loadLocalWatchlist().filter(i => i.ticker !== ticker));
-    cachedWatchlist = loadLocalWatchlist();
-    renderWatchlist();
-  }
+  if (!auth.token) return;
+  await fetch(`${API_BASE}/api/me/watchlist/${ticker}`, {
+    method: "DELETE",
+    headers: apiHeaders(),
+  });
+  await syncWatchlist();
   updateWatchlistBtn(ticker);
 }
 
 function updateWatchlistBtn(ticker) {
+  if (!auth.token) {
+    watchlistBtn.textContent = "+ Watchlist";
+    watchlistBtn.className   = "wl-toggle-btn";
+    return;
+  }
   const inList = isInWatchlist(ticker);
   watchlistBtn.textContent = inList ? "✓ In Watchlist" : "+ Watchlist";
   watchlistBtn.className   = "wl-toggle-btn" + (inList ? " in-list" : "");
@@ -301,18 +284,13 @@ watchlistBtn.addEventListener("click", async () => {
 
 // ── Clear watchlist ───────────────────────────────────────
 document.getElementById("clear-watchlist-btn").addEventListener("click", async () => {
-  if (auth.token) {
-    // Remove each item individually
-    for (const item of [...cachedWatchlist]) {
-      await fetch(`${API_BASE}/api/me/watchlist/${item.ticker}`, {
-        method: "DELETE", headers: apiHeaders(),
-      });
-    }
-    cachedWatchlist = [];
-  } else {
-    saveLocalWatchlist([]);
-    cachedWatchlist = [];
+  if (!auth.token) return;
+  for (const item of [...cachedWatchlist]) {
+    await fetch(`${API_BASE}/api/me/watchlist/${item.ticker}`, {
+      method: "DELETE", headers: apiHeaders(),
+    });
   }
+  cachedWatchlist = [];
   renderWatchlist();
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
 });
@@ -486,12 +464,7 @@ function setLoading(bool) {
 }
 
 // ── Init ──────────────────────────────────────────────────
-initAuth().then(() => {
-  if (!auth.user) {
-    cachedWatchlist = loadLocalWatchlist();
-    renderWatchlist();
-  }
-});
+initAuth();
 loadTopTickers();
 loadStats();
 

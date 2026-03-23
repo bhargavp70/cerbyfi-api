@@ -44,7 +44,7 @@ Retail investors face information overload when evaluating stocks and ETFs. Fina
 
 ### 2.2 Authentication Model
 
-- **Anonymous user**: can search and view scores; watchlist stored in browser localStorage (up to 10 items, lost on clear).
+- **Anonymous user**: can search and view scores. Clicking "+ Watchlist" opens the sign-in prompt.
 - **Registered user**: persistent server-side watchlist; can create and manage portfolios; watchlist survives across devices and sessions.
 
 ---
@@ -105,9 +105,9 @@ Retail investors face information overload when evaluating stocks and ETFs. Fina
 - Clicking a card triggers a new analysis for that ticker.
 - Each card has a remove (✕) button.
 - "Clear all" button removes all items.
-- **Anonymous**: stored in `localStorage`; survives page refresh but not device change or clear.
-- **Logged in**: stored server-side; synced on login and page load; survives across devices.
-- On sign-out, falls back to localStorage watchlist.
+- Requires a registered account. Clicking "+ Watchlist" while not signed in opens the sign-in modal automatically.
+- Stored server-side; synced on login and page load; survives across devices.
+- Watchlist is hidden when not signed in.
 
 ---
 
