@@ -3,7 +3,7 @@ const API_BASE = "";
 // Injected at build time by the server or set here for the web client
 const API_KEY  = window.CERBYFI_API_KEY || "";
 
-const state = { mode: "stock", lastData: null };
+const state = { lastData: null };
 
 // ── DOM refs ──────────────────────────────────────────────
 const form           = document.getElementById("search-form");
@@ -34,7 +34,7 @@ function addToWatchlist(ticker, mode, data) {
   const list = loadWatchlist().filter(i => i.ticker !== ticker);
   list.unshift({
     ticker,
-    mode,
+    mode: data.type,
     name:   data.name,
     score:  data.total,
     max:    data.max_total,
@@ -97,48 +97,30 @@ function renderWatchlist() {
     });
 
     card.addEventListener("click", () => {
-      state.mode = item.mode;
-      document.querySelectorAll(".tab-btn").forEach(b => {
-        b.classList.toggle("active", b.dataset.mode === item.mode);
-      });
-      tickerInput.placeholder = item.mode === "stock"
-        ? "e.g. AAPL, NVDA, TSLA" : "e.g. SPY, QQQ, VTI";
       tickerInput.value = item.ticker;
-      analyze(item.ticker, item.mode);
+      analyze(item.ticker);
     });
 
     grid.appendChild(card);
   });
 }
 
-// ── Tab switching ─────────────────────────────────────────
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    state.mode = btn.dataset.mode;
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    tickerInput.placeholder = state.mode === "stock"
-      ? "e.g. AAPL, NVDA, TSLA"
-      : "e.g. SPY, QQQ, VTI";
-  });
-});
-
 // ── Form submit ───────────────────────────────────────────
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const ticker = tickerInput.value.trim().toUpperCase();
   if (!ticker) return;
-  await analyze(ticker, state.mode);
+  await analyze(ticker);
 });
 
 // ── Watchlist button ──────────────────────────────────────
 watchlistBtn.addEventListener("click", () => {
   if (!state.lastData) return;
-  const { ticker, mode } = state.lastData;
+  const { ticker, type } = state.lastData;
   if (isInWatchlist(ticker)) {
     removeFromWatchlist(ticker);
   } else {
-    addToWatchlist(ticker, mode, state.lastData);
+    addToWatchlist(ticker, type, state.lastData);
   }
 });
 
@@ -149,19 +131,19 @@ document.getElementById("clear-watchlist-btn").addEventListener("click", () => {
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
 });
 
-async function analyze(ticker, mode) {
+async function analyze(ticker) {
   setLoading(true);
   hideAll();
 
   try {
-    const res = await fetch(`${API_BASE}/api/${mode}/${ticker}`, {
+    const res = await fetch(`${API_BASE}/api/analyze/${ticker}`, {
       headers: API_KEY ? { "X-API-Key": API_KEY } : {},
     });
     const data = await res.json();
     if (!res.ok) {
       showError(ticker, data.detail || "Unknown error");
     } else {
-      state.lastData = { ...data, mode };
+      state.lastData = data;
       renderResults(data);
       updateWatchlistBtn(ticker);
       loadTopTickers();
@@ -311,14 +293,8 @@ function renderTopList(listId, items, mode) {
       <span class="top-count">${item.count}×</span>
     `;
     li.addEventListener("click", () => {
-      state.mode = mode;
-      document.querySelectorAll(".tab-btn").forEach(b => {
-        b.classList.toggle("active", b.dataset.mode === mode);
-      });
-      tickerInput.placeholder = mode === "stock"
-        ? "e.g. AAPL, NVDA, TSLA" : "e.g. SPY, QQQ, VTI";
       tickerInput.value = item.ticker;
-      analyze(item.ticker, mode);
+      analyze(item.ticker);
     });
     ul.appendChild(li);
   });

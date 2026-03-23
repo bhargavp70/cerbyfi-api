@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import stock, fund
+from app.routers import stock, fund, analyze
 from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem
 from app.db import score_db
 from app.auth import require_api_key
@@ -40,8 +40,9 @@ app.add_middleware(
 )
 
 # All /api/* routes require a valid X-API-Key header
-app.include_router(stock.router, dependencies=[Depends(require_api_key)])
-app.include_router(fund.router,  dependencies=[Depends(require_api_key)])
+app.include_router(stock.router,   dependencies=[Depends(require_api_key)])
+app.include_router(fund.router,    dependencies=[Depends(require_api_key)])
+app.include_router(analyze.router, dependencies=[Depends(require_api_key)])
 
 
 @app.get("/config.js", include_in_schema=False)
