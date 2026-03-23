@@ -112,6 +112,11 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     if pfcf is not None and pfcf > 0:
         info["price_to_fcf"] = pfcf
 
+    # FCF margin = P/S ÷ P/FCF  (no extra API call needed)
+    ps = m.get("psTTM")
+    if ps is not None and ps > 0 and pfcf is not None and pfcf > 0:
+        info["fcf_margin"] = ps / pfcf
+
     return info
 
 
