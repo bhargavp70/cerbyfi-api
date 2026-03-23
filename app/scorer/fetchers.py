@@ -205,6 +205,14 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
         except (TypeError, ValueError):
             pass
 
+    # P/E ratio from FMP profile
+    pe = p.get("pe")
+    try:
+        if pe and float(pe) > 0:
+            result["trailingPE"] = float(pe)
+    except (TypeError, ValueError):
+        pass
+
     # Dividend yield from lastDividend / price
     ld    = p.get("lastDividend")
     price = p.get("price")
