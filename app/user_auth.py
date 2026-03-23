@@ -2,21 +2,19 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import jwt
+import bcrypt
 from fastapi import Header, HTTPException
 
 from app.config import settings
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    return _pwd.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_token(user_id: str) -> str:
@@ -34,7 +32,7 @@ def decode_token(token: str) -> Optional[str]:
             token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
         )
         return payload.get("sub")
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 
@@ -49,7 +47,6 @@ def require_user(authorization: Optional[str] = Header(default=None)) -> str:
 
 
 def optional_user(authorization: Optional[str] = Header(default=None)) -> Optional[str]:
-    """Like require_user but returns None instead of raising."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     return decode_token(authorization[7:])
