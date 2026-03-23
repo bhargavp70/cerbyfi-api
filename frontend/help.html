@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help — CerbyFi</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Help-page layout ── */
+    .help-wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+      flex: 1;
+    }
+
+    .help-hero {
+      margin-bottom: 40px;
+    }
+    .help-hero h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .help-hero p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ── Table of contents ── */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 40px;
+    }
+    .toc-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .toc ol {
+      list-style: decimal;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    .help-section {
+      margin-bottom: 48px;
+      scroll-margin-top: 24px;
+    }
+    .help-section h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-icon {
+      font-size: 1.1rem;
+    }
+    .help-section p {
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .help-section p:last-child { margin-bottom: 0; }
+
+    /* ── Sub-sections ── */
+    .help-subsection {
+      margin-top: 20px;
+      margin-bottom: 4px;
+    }
+    .help-subsection h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    /* ── Step list ── */
+    .steps {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .steps li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .step-num {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+    .callout-tip {
+      background: rgba(79,142,247,0.1);
+      border-left: 3px solid var(--accent);
+      color: var(--text);
+    }
+    .callout-note {
+      background: rgba(251,191,36,0.08);
+      border-left: 3px solid var(--amber);
+      color: var(--text);
+    }
+    .callout-label {
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    /* ── Example box ── */
+    .example-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    .example-box-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .example-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .example-table th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 4px 12px 8px 0;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .example-table td {
+      padding: 5px 12px 5px 0;
+      color: var(--text);
+      border-top: 1px solid var(--border);
+    }
+    .example-table td:last-child { color: var(--muted); }
+    .score-green { color: #4ade80; font-weight: 600; }
+    .score-amber { color: #fbbf24; font-weight: 600; }
+    .score-red   { color: #f87171; font-weight: 600; }
+    .arrow-cell  { color: var(--accent); font-weight: 700; }
+
+    /* ── Score scale ── */
+    .score-scale {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .scale-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+    }
+    .scale-bar {
+      height: 8px;
+      border-radius: 4px;
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .scale-label { color: var(--muted); }
+
+    /* ── FAQ ── */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .faq-a {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-brand">
+      <img src="logo.png" alt="CerbyFi logo" class="header-logo" />
+      <div>
+        <h1>Cerby<span>Fi</span></h1>
+        <p>Stock &amp; fund scoring — 100-point framework</p>
+      </div>
+    </div>
+    <div>
+      <a href="/" class="auth-link">← Back to app</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="help-wrap">
+
+    <a href="/" class="back-link">← Back to CerbyFi</a>
+
+    <div class="help-hero">
+      <h2>Help &amp; Documentation</h2>
+      <p>Learn how CerbyFi scores stocks and ETFs, how to use the watchlist and portfolios, and how the portfolio optimizer works.</p>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="toc">
+      <div class="toc-title">On this page</div>
+      <ol>
+        <li><a href="#scoring">How scoring works</a></li>
+        <li><a href="#searching">Searching a ticker</a></li>
+        <li><a href="#watchlist">Watchlist</a></li>
+        <li><a href="#accounts">Creating an account</a></li>
+        <li><a href="#portfolio">Portfolios</a></li>
+        <li><a href="#optimize">Portfolio Optimizer — how it works</a></li>
+        <li><a href="#faq">Frequently asked questions</a></li>
+      </ol>
+    </div>
+
+
+    <!-- ── 1. Scoring ─────────────────────────────────────── -->
+    <section class="help-section" id="scoring">
+      <h3><span class="section-icon">📊</span> How scoring works</h3>
+
+      <p>CerbyFi scores every stock or ETF on a <strong>100-point scale</strong>. The score is split across multiple categories. Each category contains individual metrics. Every metric is evaluated against thresholds and assigned a score from 0 to its maximum. Category scores are summed to produce the total.</p>
+
+      <div class="help-subsection">
+        <h4>Stock categories</h4>
+      </div>
+      <p>Stocks are evaluated across five categories worth 20 points each:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Stock scoring categories</div>
+        <table class="example-table">
+          <thead><tr><th>Category</th><th>Points</th><th>What it measures</th></tr></thead>
+          <tbody>
+            <tr><td>Valuation</td><td>20</td><td>P/E, P/B, P/S, EV/EBITDA — is the stock priced reasonably?</td></tr>
+            <tr><td>Profitability</td><td>20</td><td>Net margin, ROE, ROA, FCF margin — how efficiently does the company make money?</td></tr>
+            <tr><td>Growth</td><td>20</td><td>Revenue growth, EPS growth — is the business expanding?</td></tr>
+            <tr><td>Financial Health</td><td>20</td><td>Debt/equity, current ratio, interest coverage — is the balance sheet solid?</td></tr>
+            <tr><td>Momentum</td><td>20</td><td>52-week price performance, beta — how has the stock behaved recently?</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="help-subsection">
+        <h4>ETF / Fund categories</h4>
+      </div>
+      <p>ETFs and funds are evaluated across four categories worth 25 points each:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">ETF scoring categories</div>
+        <table class="example-table">
+          <thead><tr><th>Category</th><th>Points</th><th>What it measures</th></tr></thead>
+          <tbody>
+            <tr><td>Valuation</td><td>25</td><td>P/E ratio, P/B ratio — how is the fund priced vs its holdings?</td></tr>
+            <tr><td>Performance</td><td>25</td><td>1-year and 3-year returns — historical track record</td></tr>
+            <tr><td>Risk</td><td>25</td><td>Beta, standard deviation — how volatile is the fund?</td></tr>
+            <tr><td>Cost</td><td>25</td><td>Expense ratio — how much does it cost to hold?</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="help-subsection">
+        <h4>Rating scale</h4>
+      </div>
+      <div class="score-scale">
+        <div class="scale-row">
+          <div class="scale-bar" style="background:#4ade80;"></div>
+          <span class="score-green">70–100</span>
+          <span class="scale-label">★★★★★ Excellent — strong across most categories</span>
+        </div>
+        <div class="scale-row">
+          <div class="scale-bar" style="background:#4ade80; opacity:0.7;"></div>
+          <span class="score-green">55–69</span>
+          <span class="scale-label">★★★★☆ Good — solid fundamentals with some weaknesses</span>
+        </div>
+        <div class="scale-row">
+          <div class="scale-bar" style="background:#fbbf24;"></div>
+          <span class="score-amber">40–54</span>
+          <span class="scale-label">★★★☆☆ Fair — mixed signals, investigate further</span>
+        </div>
+        <div class="scale-row">
+          <div class="scale-bar" style="background:#fbbf24; opacity:0.7;"></div>
+          <span class="score-amber">25–39</span>
+          <span class="scale-label">★★☆☆☆ Weak — notable concerns in multiple areas</span>
+        </div>
+        <div class="scale-row">
+          <div class="scale-bar" style="background:#f87171;"></div>
+          <span class="score-red">0–24</span>
+          <span class="scale-label">★☆☆☆☆ Poor — significant red flags</span>
+        </div>
+      </div>
+
+      <div class="callout callout-note" style="margin-top:16px;">
+        <span class="callout-label">Note:</span> CerbyFi scores are for informational purposes only. A high score does not mean a stock will go up; a low score does not mean it will go down. Always do your own research.
+      </div>
+    </section>
+
+
+    <!-- ── 2. Searching ───────────────────────────────────── -->
+    <section class="help-section" id="searching">
+      <h3><span class="section-icon">🔍</span> Searching a ticker</h3>
+
+      <p>Type any US stock or ETF ticker symbol into the search box and press <strong>Analyze</strong>. CerbyFi automatically detects whether it is a stock or an ETF — you do not need to choose.</p>
+
+      <ul class="steps">
+        <li><span class="step-num">1</span>Type the ticker in the search box (e.g. <code>AAPL</code>, <code>NVDA</code>, <code>SPY</code>, <code>QQQ</code>).</li>
+        <li><span class="step-num">2</span>Press <strong>Analyze</strong> or hit Enter.</li>
+        <li><span class="step-num">3</span>Results appear on the right. Click <strong>Show metrics</strong> on any category to see the individual metric breakdown.</li>
+        <li><span class="step-num">4</span>Press <strong>+ Watchlist</strong> to save the result for quick re-access later.</li>
+      </ul>
+
+      <div class="callout callout-tip" style="margin-top:16px;">
+        <span class="callout-label">Tip:</span> Results are cached for 24 hours. If you see a <em>Cached</em> badge next to the ticker, the data is from a recent lookup and no new API call was made.
+      </div>
+    </section>
+
+
+    <!-- ── 3. Watchlist ───────────────────────────────────── -->
+    <section class="help-section" id="watchlist">
+      <h3><span class="section-icon">⭐</span> Watchlist</h3>
+
+      <p>The watchlist appears in the left sidebar. It holds up to 10 items. Each card shows the ticker, asset type, score, and a color-coded bar. Click any card to re-run the analysis.</p>
+
+      <div class="help-subsection">
+        <h4>Without an account</h4>
+      </div>
+      <p>Your watchlist is saved in your browser's local storage. It persists across page refreshes but is tied to this browser. Clearing browser data will erase it.</p>
+
+      <div class="help-subsection">
+        <h4>With an account</h4>
+      </div>
+      <p>Your watchlist is saved to the server and synced across all your devices. Sign in on any browser and your watchlist will be there.</p>
+    </section>
+
+
+    <!-- ── 4. Accounts ────────────────────────────────────── -->
+    <section class="help-section" id="accounts">
+      <h3><span class="section-icon">👤</span> Creating an account</h3>
+
+      <p>An account gives you a persistent watchlist and access to the portfolio feature.</p>
+
+      <ul class="steps">
+        <li><span class="step-num">1</span>Click <strong>Register</strong> in the top-right corner.</li>
+        <li><span class="step-num">2</span>Enter your name, email address, and a password (at least 6 characters).</li>
+        <li><span class="step-num">3</span>Click <strong>Create account</strong>. You are logged in immediately.</li>
+      </ul>
+
+      <p>To sign back in later, click <strong>Sign in</strong> and enter your email and password. You stay signed in for 30 days.</p>
+
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip:</span> Your password is stored securely using bcrypt hashing. CerbyFi never stores your plain-text password.
+      </div>
+    </section>
+
+
+    <!-- ── 5. Portfolios ──────────────────────────────────── -->
+    <section class="help-section" id="portfolio">
+      <h3><span class="section-icon">💼</span> Portfolios</h3>
+
+      <p>Portfolios let you group stocks and ETFs with a percentage allocation for each holding. CerbyFi calculates a <strong>weighted aggregate score</strong> across your entire portfolio — a single number that reflects how well the portfolio scores overall, weighted by how much of it each holding represents.</p>
+
+      <p>You must be signed in to use portfolios.</p>
+
+      <div class="help-subsection">
+        <h4>Creating a portfolio</h4>
+      </div>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Sign in to your account.</li>
+        <li><span class="step-num">2</span>Click <strong>+ New</strong> in the Portfolios section of the sidebar.</li>
+        <li><span class="step-num">3</span>Enter a name (e.g. "Tech watchlist", "Retirement", "Speculative").</li>
+        <li><span class="step-num">4</span>Your new portfolio appears in the sidebar. Click it to open the detail view.</li>
+      </ul>
+
+      <div class="help-subsection">
+        <h4>Adding holdings</h4>
+      </div>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Search for a stock or ETF using the main search box.</li>
+        <li><span class="step-num">2</span>Open the portfolio detail in the sidebar (click the portfolio name).</li>
+        <li><span class="step-num">3</span>Click <strong>+ Add [TICKER] to this portfolio</strong>. The button appears automatically when you have a portfolio open and the analyzed ticker is not already in it.</li>
+        <li><span class="step-num">4</span>The holding is added with a suggested allocation. Edit allocations to adjust.</li>
+      </ul>
+
+      <div class="help-subsection">
+        <h4>Editing allocations</h4>
+      </div>
+      <p>Allocations represent what percentage of the portfolio each holding makes up. They must always add up to exactly 100%.</p>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Open a portfolio and click <strong>Edit allocations</strong>.</li>
+        <li><span class="step-num">2</span>Adjust the number inputs. A live total shows whether your allocations sum to 100%.</li>
+        <li><span class="step-num">3</span>When the total shows ✓, click <strong>Save</strong>.</li>
+      </ul>
+
+      <div class="callout callout-note">
+        <span class="callout-label">Note:</span> The aggregate score only appears once all holdings have a score and all allocations are set. If any holding shows N/A for score, re-analyze that ticker first.
+      </div>
+
+      <div class="help-subsection">
+        <h4>Aggregate score formula</h4>
+      </div>
+      <p>The portfolio aggregate score is the sum of each holding's score, weighted by its allocation percentage:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Formula</div>
+        <p style="color:var(--text);font-size:0.92rem;margin-bottom:0;">Aggregate Score = Σ ( allocation<sub>i</sub> / 100 ) × score<sub>i</sub></p>
+      </div>
+
+      <p>For example, if you hold two stocks — AAPL at 60% allocation with a score of 80, and TSLA at 40% allocation with a score of 50 — your aggregate score would be: (0.60 × 80) + (0.40 × 50) = 48 + 20 = <strong>68</strong>.</p>
+    </section>
+
+
+    <!-- ── 6. Optimizer ───────────────────────────────────── -->
+    <section class="help-section" id="optimize">
+      <h3><span class="section-icon">⚡</span> Portfolio Optimizer — how it works</h3>
+
+      <p>The optimizer answers one question: <strong>what allocation across your current holdings produces the highest possible aggregate score?</strong></p>
+
+      <p>It does not suggest new stocks to add or remove. It works only with the holdings you already have and finds the best percentage split between them.</p>
+
+      <div class="help-subsection">
+        <h4>How to use it</h4>
+      </div>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Open a portfolio that has at least 2 holdings with scores.</li>
+        <li><span class="step-num">2</span>Click the <strong>Optimize</strong> button.</li>
+        <li><span class="step-num">3</span>A panel appears showing your current aggregate score and the optimized score, plus the suggested allocation for each holding.</li>
+        <li><span class="step-num">4</span>Review the suggestions. If you are happy with them, click <strong>Apply Allocation</strong> to save.</li>
+        <li><span class="step-num">5</span>Click <strong>Optimize</strong> again to close the panel without applying.</li>
+      </ul>
+
+      <div class="help-subsection">
+        <h4>The algorithm — plain English</h4>
+      </div>
+
+      <p>The optimizer uses a <strong>greedy algorithm</strong> with two rules:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Optimizer rules</div>
+        <table class="example-table">
+          <thead><tr><th>Rule</th><th>Value</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Minimum per holding (floor)</td><td>5%</td><td>Ensures every holding is represented — if you added it, it gets at least a small weight</td></tr>
+            <tr><td>Maximum per holding (cap)</td><td>60%</td><td>Prevents extreme concentration in a single holding</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Here is what happens step by step:</p>
+
+      <ul class="steps">
+        <li><span class="step-num">1</span><strong>Give everyone the floor.</strong> Every holding starts at 5%. The remaining budget is 100% minus (5% × number of holdings). For example, with 4 holdings: 100% − 20% = 80% remaining.</li>
+        <li><span class="step-num">2</span><strong>Rank by score.</strong> Holdings are sorted from highest score to lowest.</li>
+        <li><span class="step-num">3</span><strong>Fill the best holding first.</strong> Give as much of the remaining budget as possible to the #1 ranked holding, up to the 60% cap. Since it already has 5% from the floor, it can receive up to 55% more (reaching 60% total).</li>
+        <li><span class="step-num">4</span><strong>Move to the next holding.</strong> Give as much of whatever is left to the #2 ranked holding, again up to the 60% cap. Repeat until the budget runs out or all holdings have been given their cap.</li>
+      </ul>
+
+      <div class="callout callout-tip">
+        <span class="callout-label">Key insight:</span> Because the aggregate score is a weighted average, putting more weight on higher-scoring holdings always increases (or maintains) the total. The optimizer is mathematically guaranteed to produce a score <em>equal to or higher</em> than your current allocation.
+      </div>
+
+      <div class="help-subsection">
+        <h4>Worked example</h4>
+      </div>
+
+      <p>Suppose you have a 3-stock portfolio with these scores and current allocations:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Current allocation</div>
+        <table class="example-table">
+          <thead><tr><th>Stock</th><th>Score</th><th>Allocation</th><th>Contribution</th></tr></thead>
+          <tbody>
+            <tr><td>AAPL</td><td class="score-green">80</td><td>20%</td><td>16.0</td></tr>
+            <tr><td>MSFT</td><td class="score-green">72</td><td>55%</td><td>39.6</td></tr>
+            <tr><td>TSLA</td><td class="score-red">38</td><td>25%</td><td>9.5</td></tr>
+            <tr><td><strong>Total</strong></td><td></td><td><strong>100%</strong></td><td><strong>65.1</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The optimizer applies its rules:</p>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Floor: each holding gets 5%. Remaining budget = 100% − 15% = 85%.</li>
+        <li><span class="step-num">2</span>Ranked order: AAPL (80) → MSFT (72) → TSLA (38).</li>
+        <li><span class="step-num">3</span>AAPL gets filled to the cap: already has 5%, gets 55% more → <strong>60%</strong>. Remaining = 85% − 55% = 30%.</li>
+        <li><span class="step-num">4</span>MSFT gets filled to the cap: already has 5%, gets 30% more (cap is 55 headroom, but only 30 left) → <strong>35%</strong>. Remaining = 0%.</li>
+        <li><span class="step-num">5</span>TSLA stays at floor: <strong>5%</strong>.</li>
+      </ul>
+
+      <div class="example-box">
+        <div class="example-box-title">Optimized allocation</div>
+        <table class="example-table">
+          <thead><tr><th>Stock</th><th>Score</th><th>Current</th><th>Optimized</th><th>Contribution</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>AAPL</td>
+              <td class="score-green">80</td>
+              <td>20%</td>
+              <td class="arrow-cell">60%</td>
+              <td>48.0</td>
+            </tr>
+            <tr>
+              <td>MSFT</td>
+              <td class="score-green">72</td>
+              <td>55%</td>
+              <td class="arrow-cell">35%</td>
+              <td>25.2</td>
+            </tr>
+            <tr>
+              <td>TSLA</td>
+              <td class="score-red">38</td>
+              <td>25%</td>
+              <td class="arrow-cell">5%</td>
+              <td>1.9</td>
+            </tr>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td></td>
+              <td><strong>65.1</strong></td>
+              <td></td>
+              <td><strong class="score-green">75.1 ↑</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The optimized allocation raises the aggregate score from <span class="score-amber">65.1</span> to <span class="score-green">75.1</span> — a gain of 10 points — simply by shifting weight toward the highest-scoring holdings.</p>
+
+      <div class="help-subsection">
+        <h4>What the optimizer does NOT do</h4>
+      </div>
+      <p>It is important to understand the limits of the optimizer:</p>
+      <ul class="steps">
+        <li><span class="step-num">✗</span>It does <strong>not</strong> predict future performance. A high score today does not guarantee future returns.</li>
+        <li><span class="step-num">✗</span>It does <strong>not</strong> consider diversification, sector exposure, or correlation between holdings.</li>
+        <li><span class="step-num">✗</span>It does <strong>not</strong> account for your personal risk tolerance or investment horizon.</li>
+        <li><span class="step-num">✗</span>It does <strong>not</strong> suggest adding or removing holdings — only rebalancing what is already there.</li>
+      </ul>
+
+      <div class="callout callout-note">
+        <span class="callout-label">In short:</span> The optimizer is a mathematical tool that maximizes a score within fixed constraints. Use it as one input among many, not as investment advice.
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ── 7. FAQ ──────────────────────────────────────────── -->
+    <section class="help-section" id="faq">
+      <h3><span class="section-icon">❓</span> Frequently asked questions</h3>
+
+      <div class="faq-item">
+        <div class="faq-q">Why does a metric show N/A?</div>
+        <div class="faq-a">Some metrics are not available for all companies. For example, very small companies may not report all financials, or the data provider may not have that data point. N/A metrics score 0 for that metric.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Why does the same ticker sometimes return different scores on different days?</div>
+        <div class="faq-a">Scores are cached for 24 hours. After the cache expires, the next lookup fetches fresh data from the financial data providers. Company fundamentals update quarterly, so large swings between daily lookups are uncommon.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">The optimizer shows the same score before and after. Why?</div>
+        <div class="faq-a">If your current allocation already has the most weight on your highest-scoring holdings (within the floor/cap rules), the optimizer cannot improve it further. This is the mathematically optimal point for your current holdings.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can I have more than one portfolio?</div>
+        <div class="faq-a">Yes. Click <strong>+ New</strong> in the Portfolios sidebar to create as many portfolios as you like. Each is independent with its own holdings and allocations.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What happens to my watchlist if I sign out?</div>
+        <div class="faq-a">Your server-side watchlist is preserved for when you sign back in. While signed out, the app falls back to your browser's local storage watchlist, which may be different.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Does CerbyFi work for non-US stocks?</div>
+        <div class="faq-a">Not currently. CerbyFi only supports US-listed stocks and ETFs. International markets may be added in a future release.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Is this financial advice?</div>
+        <div class="faq-a">No. CerbyFi is an informational tool only. Scores are based on publicly available financial data and a fixed scoring framework. Nothing on CerbyFi constitutes investment advice. Always consult a qualified financial professional before making investment decisions.</div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  Data: Finnhub &nbsp;·&nbsp; Financial Modeling Prep &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; <a href="/" style="color:var(--muted);">Back to app</a>
+</footer>
+
+</body>
+</html>

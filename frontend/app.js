@@ -46,11 +46,13 @@ function renderAuthState() {
   if (auth.user) {
     el.innerHTML = `
       <span class="auth-name">Hi, ${escHtml(auth.user.name)}</span>
+      <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
       <button class="auth-link" id="btn-signout">Sign out</button>
     `;
     document.getElementById("btn-signout").addEventListener("click", signOut);
   } else {
     el.innerHTML = `
+      <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
       <button class="auth-link" id="btn-open-login">Sign in</button>
       <button class="auth-link primary" id="btn-open-register">Register</button>
     `;
