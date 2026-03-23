@@ -6,6 +6,8 @@ from app.config import settings
 
 FMP_BASE     = "https://financialmodelingprep.com"
 FINNHUB_BASE = "https://finnhub.io/api/v1"
+YAHOO_BASE   = "https://query1.finance.yahoo.com"
+YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 # ── Finnhub (stocks) ─────────────────────────────────────────────────────────
@@ -136,13 +138,29 @@ def _fmp_get(path: str, **params) -> Union[dict, list]:
     return data
 
 
+def _yahoo_closes(ticker: str) -> list:
+    """3 years of daily closes from Yahoo Finance. No API key required."""
+    resp = requests.get(
+        f"{YAHOO_BASE}/v8/finance/chart/{ticker}",
+        params={"range": "3y", "interval": "1d"},
+        headers=YAHOO_HEADERS,
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    result = data.get("chart", {}).get("result")
+    if not result:
+        return []
+    raw = result[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
+    return [c for c in raw if c is not None]
+
+
 def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
     last_error = None
     for attempt in range(retries):
         try:
+            # FMP profile: name, AUM, dividend yield, isEtf validation (free for all ETFs)
             profile = _fmp_get("/stable/profile", symbol=ticker)
-            # 800 trading days ≈ 3.2 years of daily closes
-            history = _fmp_get("/stable/historical-price-eod/light", symbol=ticker, limit=800)
 
             if not profile or not isinstance(profile, list) or not profile[0].get("companyName"):
                 raise ValueError(
@@ -155,9 +173,12 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
                     f"'{ticker}' does not appear to be an ETF. "
                     "Use the Stock option for individual stocks."
                 )
+
+            # Yahoo Finance: price history (free, no key, all ETFs)
+            closes = _yahoo_closes(ticker)
             break
         except ValueError:
-            raise  # Don't retry — wrong ticker or plan limitation
+            raise
         except Exception as e:
             last_error = e
             if attempt < retries - 1:
@@ -190,37 +211,32 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
 
     # expense_ratio not available on free plan — will score as N/A
 
-    # Historical prices: list of {symbol, date, price, volume}, newest-first
-    hist = history if isinstance(history, list) else []
-    if hist:
-        closes = [float(d["price"]) for d in reversed(hist)]
+    if len(closes) >= 4:
+        daily_returns = [(closes[i] - closes[i-1]) / closes[i-1]
+                         for i in range(1, len(closes))]
+        mean_r   = sum(daily_returns) / len(daily_returns)
+        variance = sum((r - mean_r) ** 2 for r in daily_returns) / len(daily_returns)
+        result["annual_volatility"] = math.sqrt(variance * 252) * 100
 
-        if len(closes) >= 4:
-            daily_returns = [(closes[i] - closes[i-1]) / closes[i-1]
-                             for i in range(1, len(closes))]
-            mean_r   = sum(daily_returns) / len(daily_returns)
-            variance = sum((r - mean_r) ** 2 for r in daily_returns) / len(daily_returns)
-            result["annual_volatility"] = math.sqrt(variance * 252) * 100
+        peak = closes[0]
+        max_dd = 0.0
+        for c in closes:
+            if c > peak:
+                peak = c
+            dd = (peak - c) / peak
+            if dd > max_dd:
+                max_dd = dd
+        result["max_drawdown"] = max_dd * 100
 
-            peak = closes[0]
-            max_dd = 0.0
-            for c in closes:
-                if c > peak:
-                    peak = c
-                dd = (peak - c) / peak
-                if dd > max_dd:
-                    max_dd = dd
-            result["max_drawdown"] = max_dd * 100
+        # 1-year return (~252 trading days)
+        lb1 = min(252, len(closes) - 1)
+        result["return_1y"] = (closes[-1] - closes[-1 - lb1]) / closes[-1 - lb1] * 100
 
-            # 1-year return (~252 trading days)
-            lb1 = min(252, len(closes) - 1)
-            result["return_1y"] = (closes[-1] - closes[-1 - lb1]) / closes[-1 - lb1] * 100
-
-            # 3-year annualized return
-            if len(closes) >= 252:
-                lb3 = min(756, len(closes) - 1)
-                total_ret = (closes[-1] - closes[-1 - lb3]) / closes[-1 - lb3]
-                years = lb3 / 252
-                result["return_3y_annualized"] = ((1 + total_ret) ** (1 / years) - 1) * 100
+        # 3-year annualized return
+        if len(closes) >= 252:
+            lb3 = min(756, len(closes) - 1)
+            total_ret = (closes[-1] - closes[-1 - lb3]) / closes[-1 - lb3]
+            years = lb3 / 252
+            result["return_3y_annualized"] = ((1 + total_ret) ** (1 / years) - 1) * 100
 
     return result
