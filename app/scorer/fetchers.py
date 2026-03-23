@@ -14,6 +14,11 @@ def _get(path: str, **params) -> Union[dict, list]:
     resp = requests.get(f"{FMP_BASE}{path}", params=params, timeout=15)
     if resp.status_code == 404:
         return {}
+    if resp.status_code == 402:
+        raise ValueError(
+            "This ticker requires an FMP paid plan. "
+            "The free plan supports a limited set of symbols (e.g. AAPL, MSFT, NVDA, TSLA, GOOGL, AMZN, META)."
+        )
     resp.raise_for_status()
     if not resp.content or not resp.content.strip():
         return {}
@@ -35,6 +40,8 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
             if not profile or not isinstance(profile, list) or not profile[0].get("companyName"):
                 raise ValueError(f"No data found for '{ticker}'. Check the ticker symbol.")
             break
+        except ValueError:
+            raise  # Don't retry — wrong ticker or plan limitation
         except Exception as e:
             last_error = e
             if attempt < retries - 1:
@@ -133,6 +140,8 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
                     "Use the Stock option for individual stocks."
                 )
             break
+        except ValueError:
+            raise  # Don't retry — wrong ticker or plan limitation
         except Exception as e:
             last_error = e
             if attempt < retries - 1:
