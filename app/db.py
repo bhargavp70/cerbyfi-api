@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
     email         TEXT UNIQUE NOT NULL,
     name          TEXT NOT NULL,
     password_hash TEXT NOT NULL,
+    is_admin      INTEGER NOT NULL DEFAULT 0,
     created_at    REAL NOT NULL
 );
 
@@ -84,6 +85,11 @@ class ScoreDB:
         self._conn.execute("PRAGMA journal_mode=WAL")
         with self._lock:
             self._conn.executescript(_DDL)
+            # Migration: add is_admin column to existing installs
+            try:
+                self._conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+            except Exception:
+                pass  # column already exists
             self._conn.commit()
 
     # ── Cache ────────────────────────────────────────────────
@@ -158,18 +164,29 @@ class ScoreDB:
 
     # ── Users ────────────────────────────────────────────────
 
-    def create_user(self, user_id: str, email: str, name: str, password_hash: str) -> None:
+    def seed_admins(self, admin_emails: set) -> None:
+        """Ensure all config-defined admin emails have is_admin=1 in the DB."""
+        if not admin_emails:
+            return
+        with self._lock:
+            for email in admin_emails:
+                self._conn.execute(
+                    "UPDATE users SET is_admin=1 WHERE email=?", (email.lower(),)
+                )
+            self._conn.commit()
+
+    def create_user(self, user_id: str, email: str, name: str, password_hash: str, is_admin: bool = False) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?,?,?,?,?)",
-                (user_id, email.lower().strip(), name.strip(), password_hash, time.time()),
+                "INSERT INTO users (id, email, name, password_hash, is_admin, created_at) VALUES (?,?,?,?,?,?)",
+                (user_id, email.lower().strip(), name.strip(), password_hash, int(is_admin), time.time()),
             )
             self._conn.commit()
 
     def get_user_by_email(self, email: str) -> Optional[dict]:
         with self._lock:
             row = self._conn.execute(
-                "SELECT id, email, name, password_hash FROM users WHERE email=?",
+                "SELECT id, email, name, password_hash, is_admin FROM users WHERE email=?",
                 (email.lower().strip(),),
             ).fetchone()
         return dict(row) if row else None
@@ -182,9 +199,24 @@ class ScoreDB:
     def get_user_by_id(self, user_id: str) -> Optional[dict]:
         with self._lock:
             row = self._conn.execute(
-                "SELECT id, email, name FROM users WHERE id=?", (user_id,)
+                "SELECT id, email, name, is_admin FROM users WHERE id=?", (user_id,)
             ).fetchone()
         return dict(row) if row else None
+
+    def list_users(self) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, email, name, is_admin, created_at FROM users ORDER BY created_at ASC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def set_admin(self, user_id: str, is_admin: bool) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE users SET is_admin=? WHERE id=?", (int(is_admin), user_id)
+            )
+            self._conn.commit()
+        return cur.rowcount > 0
 
     # ── Watchlist ────────────────────────────────────────────
 

@@ -27,10 +27,12 @@
 
 <!-- Admin modal -->
 <div id="admin-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:400px;">
+  <div class="modal-box" style="max-width:520px;max-height:80vh;display:flex;flex-direction:column;">
     <button class="modal-close" id="admin-modal-close">✕</button>
     <h3 style="margin-bottom:20px;font-size:1.1rem;">Admin Dashboard</h3>
-    <div id="admin-stats-content">
+
+    <!-- Stats -->
+    <div id="admin-stats-content" style="margin-bottom:24px;">
       <div class="admin-stat-row">
         <span class="admin-stat-label">Registered users</span>
         <span class="admin-stat-value" id="admin-user-count">—</span>
@@ -40,6 +42,12 @@
         <span class="admin-stat-value" id="admin-analyses-count">—</span>
       </div>
     </div>
+
+    <!-- User list -->
+    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">
+      Users
+    </div>
+    <div id="admin-user-list" style="overflow-y:auto;flex:1;"></div>
   </div>
 </div>
 

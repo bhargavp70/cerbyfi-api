@@ -98,6 +98,51 @@ header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
 .admin-stat-label { font-size: 0.9rem; color: var(--muted); }
 .admin-stat-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
 
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.admin-user-row:last-child { border-bottom: none; }
+.admin-user-info { flex: 1; min-width: 0; }
+.admin-user-name { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-user-email { color: var(--muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-role-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.admin-role-badge.is-admin {
+  background: rgba(251,191,36,0.15);
+  color: var(--amber);
+  border: 1px solid rgba(251,191,36,0.3);
+}
+.admin-role-badge.is-user {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.admin-toggle-btn {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.admin-toggle-btn.promote { color: var(--amber); border-color: rgba(251,191,36,0.4); }
+.admin-toggle-btn.promote:hover { background: rgba(251,191,36,0.1); }
+.admin-toggle-btn.demote  { color: var(--red);  border-color: rgba(248,113,113,0.4); }
+.admin-toggle-btn.demote:hover  { background: rgba(248,113,113,0.08); }
+
 /* ── Auth modal ── */
 .modal-overlay {
   position: fixed; inset: 0;

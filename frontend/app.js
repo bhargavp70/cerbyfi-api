@@ -178,15 +178,81 @@ adminModal.addEventListener("click", e => { if (e.target === adminModal) adminMo
 async function openAdminModal() {
   document.getElementById("admin-user-count").textContent = "…";
   document.getElementById("admin-analyses-count").textContent = "…";
+  document.getElementById("admin-user-list").innerHTML = `<div style="color:var(--muted);font-size:0.85rem;padding:8px 0;">Loading…</div>`;
   adminModal.style.display = "flex";
+  await refreshAdminModal();
+}
+
+async function refreshAdminModal() {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/stats`, { headers: apiHeaders() });
-    if (res.ok) {
-      const data = await res.json();
+    const [statsRes, usersRes] = await Promise.all([
+      fetch(`${API_BASE}/api/admin/stats`, { headers: apiHeaders() }),
+      fetch(`${API_BASE}/api/admin/users`, { headers: apiHeaders() }),
+    ]);
+    if (statsRes.ok) {
+      const data = await statsRes.json();
       document.getElementById("admin-user-count").textContent = data.user_count.toLocaleString();
       document.getElementById("admin-analyses-count").textContent = data.total_analyses.toLocaleString();
     }
+    if (usersRes.ok) {
+      const users = await usersRes.json();
+      renderAdminUserList(users);
+    }
   } catch { /* silent */ }
+}
+
+function renderAdminUserList(users) {
+  const el = document.getElementById("admin-user-list");
+  el.innerHTML = "";
+  users.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "admin-user-row";
+
+    const isSelf = u.id === auth.user?.id;
+    const canToggle = !u.is_protected && !isSelf;
+    const badgeClass = u.is_admin ? "is-admin" : "is-user";
+    const badgeText  = u.is_admin ? "Admin" : "User";
+
+    let actionHtml = "";
+    if (canToggle) {
+      if (u.is_admin) {
+        actionHtml = `<button class="admin-toggle-btn demote" data-id="${u.id}" data-admin="false">Remove admin</button>`;
+      } else {
+        actionHtml = `<button class="admin-toggle-btn promote" data-id="${u.id}" data-admin="true">Make admin</button>`;
+      }
+    }
+
+    row.innerHTML = `
+      <div class="admin-user-info">
+        <div class="admin-user-name">${escHtml(u.name)}</div>
+        <div class="admin-user-email">${escHtml(u.email)}</div>
+      </div>
+      <span class="admin-role-badge ${badgeClass}">${badgeText}</span>
+      ${actionHtml}
+    `;
+
+    if (canToggle) {
+      row.querySelector(".admin-toggle-btn").addEventListener("click", async e => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        const makeAdmin = btn.dataset.admin === "true";
+        try {
+          const res = await fetch(`${API_BASE}/api/admin/users/${u.id}`, {
+            method: "PATCH",
+            headers: apiHeaders(true),
+            body: JSON.stringify({ is_admin: makeAdmin }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert(err.detail || "Failed to update.");
+          }
+          await refreshAdminModal();
+        } catch { btn.disabled = false; }
+      });
+    }
+
+    el.appendChild(row);
+  });
 }
 
 // ── Watchlist (requires account) ──────────────────────────

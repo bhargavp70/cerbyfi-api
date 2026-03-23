@@ -7,6 +7,7 @@ from app.db import score_db
 from app.config import settings
 from app.user_auth import hash_password, verify_password, create_token, require_user
 
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -50,9 +51,9 @@ def register(body: RegisterIn):
     if score_db.get_user_by_email(body.email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
     user_id = str(uuid.uuid4())
-    score_db.create_user(user_id, body.email, body.name, hash_password(body.password))
-    token = create_token(user_id)
     is_admin = body.email in settings.admin_email_set
+    score_db.create_user(user_id, body.email, body.name, hash_password(body.password), is_admin=is_admin)
+    token = create_token(user_id)
     return {"token": token, "user": {"id": user_id, "email": body.email, "name": body.name, "is_admin": is_admin}}
 
 
@@ -62,8 +63,7 @@ def login(body: LoginIn):
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     token = create_token(user["id"])
-    is_admin = user["email"] in settings.admin_email_set
-    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "is_admin": is_admin}}
+    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "is_admin": bool(user.get("is_admin"))}}
 
 
 @router.get("/me")
@@ -71,4 +71,4 @@ def me(user_id: str = Depends(require_user)):
     user = score_db.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    return {**user, "is_admin": user["email"] in settings.admin_email_set}
+    return {**user, "is_admin": bool(user.get("is_admin"))}

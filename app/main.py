@@ -10,6 +10,9 @@ from app.db import score_db
 from app.auth import require_api_key
 from app.config import settings
 
+# Seed config-defined admins into DB on every startup
+score_db.seed_admins(settings.admin_email_set)
+
 app = FastAPI(
     title="CerbyFi API",
     description="Stock and ETF/Fund scoring API",

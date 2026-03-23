@@ -57,6 +57,6 @@ def require_admin(authorization: Optional[str] = Header(default=None)) -> str:
     from app.db import score_db  # avoid circular import at module level
     user_id = require_user(authorization)
     user = score_db.get_user_by_id(user_id)
-    if not user or user["email"] not in settings.admin_email_set:
+    if not user or not user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required.")
     return user_id
