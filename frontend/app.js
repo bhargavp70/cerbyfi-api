@@ -61,7 +61,8 @@ function updateWatchlistBtn(ticker) {
 }
 
 function renderWatchlist() {
-  const list = loadWatchlist();
+  const full = loadWatchlist();
+  const list = full.slice(0, 10);
   const section = document.getElementById("watchlist-section");
   const grid    = document.getElementById("watchlist-grid");
 

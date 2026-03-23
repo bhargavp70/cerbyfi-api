@@ -35,7 +35,32 @@ header h1 span { color: var(--accent); }
 header p { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
 
 /* ── Main ── */
-main { flex: 1; max-width: 760px; margin: 0 auto; width: 100%; padding: 32px 20px 48px; }
+main { flex: 1; max-width: 1160px; margin: 0 auto; width: 100%; padding: 32px 20px 48px; }
+
+/* ── Two-column layout ── */
+.layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.layout-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.layout-main {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 780px) {
+  .layout { flex-direction: column-reverse; }
+  .layout-sidebar { width: 100%; }
+}
 
 /* ── Search card ── */
 .search-card {
@@ -254,14 +279,13 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
 }
 
 /* ── Most Searched ── */
-#top-section { margin-bottom: 28px; }
+#top-section { }
 
 .top-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-@media (max-width: 520px) { .top-columns { grid-template-columns: 1fr; } }
 
 .top-col-label {
   font-size: 0.75rem;
@@ -329,7 +353,7 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
 }
 
 /* ── Watchlist ── */
-#watchlist-section { margin-bottom: 28px; }
+#watchlist-section { }
 
 .watchlist-header {
   display: flex;
@@ -357,9 +381,9 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
 .wl-clear-btn:hover { color: var(--red); }
 
 .watchlist-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .wl-card {
