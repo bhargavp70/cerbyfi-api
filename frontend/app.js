@@ -715,10 +715,10 @@ function downloadAiPdf() {
     align-items: flex-start;
     page-break-inside: avoid;
   }
-  .hdr-brand { font-size: 21px; font-weight: 800; letter-spacing: -0.4px; }
+  .hdr-brand { font-size: 24px; font-weight: 800; letter-spacing: -0.4px; }
   .hdr-brand span { color: #4f8ef7; }
-  .hdr-sub { font-size: 10px; color: #94a3b8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
-  .hdr-date { font-size: 11px; color: #94a3b8; text-align: right; }
+  .hdr-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .hdr-date { font-size: 13px; color: #94a3b8; text-align: right; }
 
   /* ── Company band ── */
   .co {
@@ -733,43 +733,43 @@ function downloadAiPdf() {
     gap: 12px;
     page-break-inside: avoid;
   }
-  .co-name { font-size: 19px; font-weight: 700; }
+  .co-name { font-size: 22px; font-weight: 700; }
   .co-badges { display: flex; gap: 7px; margin-top: 5px; }
-  .badge { background: #334155; color: #94a3b8; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-  .score-num { font-size: 34px; font-weight: 800; line-height: 1; text-align: right; }
-  .score-denom { font-size: 16px; color: #64748b; }
-  .stars { color: #fbbf24; font-size: 15px; margin-top: 2px; text-align: right; }
-  .rating { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 2px; }
+  .badge { background: #334155; color: #94a3b8; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .score-num { font-size: 38px; font-weight: 800; line-height: 1; text-align: right; }
+  .score-denom { font-size: 18px; color: #64748b; }
+  .stars { color: #fbbf24; font-size: 17px; margin-top: 2px; text-align: right; }
+  .rating { font-size: 13px; color: #94a3b8; text-align: right; margin-top: 2px; }
 
   /* ── Score table ── */
   .section { margin-bottom: 22px; page-break-inside: avoid; }
   .section-label {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.1em; color: #64748b; margin-bottom: 10px;
   }
   table { width: 100%; border-collapse: collapse; }
-  .td-label { padding: 5px 10px 5px 0; font-size: 13px; color: #334155; }
-  .td-score { padding: 5px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
-  .td-bar { padding: 5px 0; width: 130px; }
-  .td-pct { padding: 5px 0 5px 8px; font-size: 11px; color: #64748b; }
-  .bar-bg { background: #e2e8f0; border-radius: 3px; height: 6px; width: 100%; }
-  .bar-fg { border-radius: 3px; height: 6px; }
+  .td-label { padding: 6px 10px 6px 0; font-size: 15px; color: #334155; }
+  .td-score { padding: 6px 10px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .td-bar { padding: 6px 0; width: 130px; }
+  .td-pct { padding: 6px 0 6px 8px; font-size: 13px; color: #64748b; }
+  .bar-bg { background: #e2e8f0; border-radius: 3px; height: 7px; width: 100%; }
+  .bar-fg { border-radius: 3px; height: 7px; }
 
   /* ── Divider ── */
   hr { border: none; border-top: 1px solid #e2e8f0; margin: 4px 0 20px; }
 
   /* ── AI text ── */
-  .ai-body { font-size: 13.5px; line-height: 1.75; color: #334155; }
+  .ai-body { font-size: 15px; line-height: 1.8; color: #334155; }
   .ai-body .ai-h3 {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.1em; color: #4f46e5;
-    margin: 18px 0 7px; padding-bottom: 5px;
+    margin: 20px 0 8px; padding-bottom: 5px;
     border-bottom: 1px solid #e0e7ff;
     page-break-after: avoid;
   }
-  .ai-body p { margin: 0 0 8px; color: #475569; }
+  .ai-body p { margin: 0 0 10px; color: #475569; }
   .ai-body .ai-ul { list-style: none; padding: 0; margin: 0 0 10px; }
-  .ai-body .ai-ul li { padding: 3px 0 3px 14px; color: #475569; }
+  .ai-body .ai-ul li { padding: 4px 0 4px 16px; color: #475569; }
   .ai-body .ai-ul li::before { content: "• "; }
   .ai-body strong { color: #1e293b; }
 
@@ -777,7 +777,7 @@ function downloadAiPdf() {
   .footer {
     margin-top: 26px; padding-top: 12px;
     border-top: 1px solid #e2e8f0;
-    font-size: 9.5px; color: #94a3b8; line-height: 1.6;
+    font-size: 11px; color: #94a3b8; line-height: 1.6;
   }
 </style>
 </head>
