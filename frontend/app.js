@@ -577,7 +577,13 @@ async function runAiAnalysis() {
   const body = document.getElementById("ai-analysis-body");
   if (!state.lastData) return;
 
-  body.innerHTML = `<div style="color:var(--muted);font-size:0.88rem;"><span class="ai-spinner"></span>Analyzing with Claude…</div>`;
+  body.innerHTML = `
+    <div style="color:var(--muted);font-size:0.88rem;line-height:1.7;">
+      <span class="ai-spinner"></span>Researching ${escHtml(state.lastData.ticker)} with Claude…
+      <div style="font-size:0.78rem;margin-top:6px;color:var(--muted);opacity:0.7;">
+        Searching news, analyst opinions, and sentiment. This takes 20–40 seconds.
+      </div>
+    </div>`;
 
   try {
     const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
@@ -593,13 +599,36 @@ async function runAiAnalysis() {
       return;
     }
 
-    // Render **heading** as styled h4
+    // Convert markdown to styled HTML
     const html = escHtml(result.text)
-      .replace(/\*\*(.+?)\*\*/g, "<h4>$1</h4>")
-      .replace(/\n{2,}/g, "\n");
+      // ## Section headings
+      .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+      // Numbered list items
+      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
+      // Bullet points
+      .replace(/^[•\-] (.+)$/gm, "<li>$1</li>")
+      // Wrap consecutive <li> in <ul>
+      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+      // Bold text
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      // Paragraph breaks
+      .replace(/\n{2,}/g, "</p><p>")
+      // Wrap in paragraph
+      .replace(/^(?!<[hul])/, "<p>")
+      .replace(/$(?!<\/[hul])/, "</p>")
+      // Clean up empty paragraphs
+      .replace(/<p><\/p>/g, "")
+      .replace(/<p>(<[hul])/g, "$1")
+      .replace(/(<\/[hul][^>]*>)<\/p>/g, "$1");
 
-    body.innerHTML = `<div class="ai-analysis-text">${html}</div>
-      <button id="ai-analyze-btn" class="ai-analyze-btn" style="margin-top:14px;font-size:0.78rem;padding:6px 14px;">Regenerate</button>`;
+    body.innerHTML = `
+      <div class="ai-analysis-text">${html}</div>
+      <div class="ai-disclaimer">
+        AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
+      </div>
+      <button id="ai-analyze-btn" class="ai-analyze-btn" style="margin-top:14px;font-size:0.78rem;padding:6px 14px;">
+        ↺ Refresh research
+      </button>`;
     document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
   } catch(err) {
     body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;
