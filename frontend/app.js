@@ -574,9 +574,10 @@ function resetAiAnalysis() {
 }
 
 async function runAiAnalysis() {
-  if (!state.lastData || !window.CLAUDE_API_KEY) return;
-  const data = state.lastData;
   const body = document.getElementById("ai-analysis-body");
+  if (!state.lastData) { body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">No analysis loaded.</div>`; return; }
+  if (!window.CLAUDE_API_KEY) { body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">CLAUDE_API_KEY is not configured on the server.</div>`; return; }
+  const data = state.lastData;
 
   body.innerHTML = `<div style="color:var(--muted);font-size:0.88rem;"><span class="ai-spinner"></span>Analyzing with Claude…</div>`;
 
@@ -639,8 +640,8 @@ Keep responses factual, grounded in the scores above. Do not make buy or sell re
     body.innerHTML = `<div class="ai-analysis-text">${html}</div>
       <button id="ai-analyze-btn" class="ai-analyze-btn" style="margin-top:14px;font-size:0.78rem;padding:6px 14px;">Regenerate</button>`;
     document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
-  } catch {
-    body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Could not reach AI service.</div>`;
+  } catch(err) {
+    body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;
   }
 }
 
