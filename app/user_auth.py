@@ -52,6 +52,16 @@ def optional_user(authorization: Optional[str] = Header(default=None)) -> Option
     return decode_token(authorization[7:])
 
 
+def require_premium(authorization: Optional[str] = Header(default=None)) -> str:
+    """FastAPI dependency — requires valid Bearer JWT belonging to a premium user."""
+    from app.db import score_db
+    user_id = require_user(authorization)
+    user = score_db.get_user_by_id(user_id)
+    if not user or not user.get("is_premium"):
+        raise HTTPException(status_code=403, detail="Premium access required.")
+    return user_id
+
+
 def require_admin(authorization: Optional[str] = Header(default=None)) -> str:
     """FastAPI dependency — requires valid Bearer JWT belonging to an admin user."""
     from app.db import score_db  # avoid circular import at module level

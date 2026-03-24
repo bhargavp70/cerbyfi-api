@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import stock, fund, analyze, user, watchlist_user, portfolio, admin
+from app.routers import stock, fund, analyze, user, watchlist_user, portfolio, admin, premium
 from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem, StatsResponse
 from app.db import score_db
 from app.auth import require_api_key
@@ -50,6 +50,7 @@ app.include_router(user.router)           # no API key — public auth endpoints
 app.include_router(watchlist_user.router) # JWT-protected, no X-API-Key needed
 app.include_router(portfolio.router)      # JWT-protected portfolio management
 app.include_router(admin.router)          # Admin-only endpoints
+app.include_router(premium.router)        # Premium-only endpoints
 
 
 @app.get("/config.js", include_in_schema=False)
@@ -57,9 +58,8 @@ def frontend_config():
     """Injects the client API key into the browser without storing it in a static file."""
     from fastapi.responses import Response
     key = settings.cerbyfi_api_key or ""
-    claude_key = settings.claude_api_key or ""
     return Response(
-        content=f"window.CERBYFI_API_KEY = '{key}';\nwindow.CLAUDE_API_KEY = '{claude_key}';",
+        content=f"window.CERBYFI_API_KEY = '{key}';",
         media_type="application/javascript",
     )
 

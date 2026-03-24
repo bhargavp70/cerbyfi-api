@@ -575,65 +575,26 @@ function resetAiAnalysis() {
 
 async function runAiAnalysis() {
   const body = document.getElementById("ai-analysis-body");
-  if (!state.lastData) { body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">No analysis loaded.</div>`; return; }
-  if (!window.CLAUDE_API_KEY) { body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">CLAUDE_API_KEY is not configured on the server.</div>`; return; }
-  const data = state.lastData;
+  if (!state.lastData) return;
 
   body.innerHTML = `<div style="color:var(--muted);font-size:0.88rem;"><span class="ai-spinner"></span>Analyzing with Claude…</div>`;
 
-  const categoryText = Object.values(data.categories)
-    .map(c => `- ${c.label}: ${c.score}/${c.max} (${c.pct.toFixed(0)}%)`)
-    .join("\n");
-
-  const prompt = `You are a concise financial analyst assistant. Here is the CerbyFi score report for ${data.name} (${data.ticker}):
-
-Overall score: ${data.total}/${data.max_total} (${data.pct.toFixed(0)}%) — ${data.rating_label}
-
-Category breakdown:
-${categoryText}
-
-Respond with exactly these four sections using these headings:
-**Summary**
-2 sentences on the company's overall financial health.
-
-**Strengths**
-The 2 strongest scoring areas and why they matter to investors.
-
-**Concerns**
-The 2 weakest areas an investor should investigate further.
-
-**Question to ask**
-One specific question a retail investor should research before buying.
-
-Keep responses factual, grounded in the scores above. Do not make buy or sell recommendations.`;
-
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
       method: "POST",
-      headers: {
-        "x-api-key": window.CLAUDE_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-calls": "true",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 600,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      headers: apiHeaders(true),
+      body: JSON.stringify({ data: state.lastData }),
     });
 
+    const result = await res.json();
+
     if (!res.ok) {
-      const err = await res.json();
-      body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">AI analysis failed: ${escHtml(err.error?.message || "Unknown error")}</div>`;
+      body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">${escHtml(result.detail || "AI analysis failed.")}</div>`;
       return;
     }
 
-    const result = await res.json();
-    const text = result.content[0].text;
-
-    // Render markdown-style bold headings
-    const html = escHtml(text)
+    // Render **heading** as styled h4
+    const html = escHtml(result.text)
       .replace(/\*\*(.+?)\*\*/g, "<h4>$1</h4>")
       .replace(/\n{2,}/g, "\n");
 
