@@ -80,6 +80,12 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
     raise HTTPException(status_code=504, detail="AI analysis timed out (too many search rounds).")
 
 
+@router.get("/ai-status/{ticker}")
+def ai_status(ticker: str, user_id: str = Depends(require_premium)):
+    generated_at = score_db.ai_analysis_cache_info(ticker.upper())
+    return {"cached": generated_at is not None, "generated_at": generated_at}
+
+
 @router.post("/ai-analyze")
 def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
     if not settings.claude_api_key:

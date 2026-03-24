@@ -573,10 +573,26 @@ function setLoading(bool) {
 // ── AI Analysis (premium) ─────────────────────────────────
 document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
 
-function resetAiAnalysis() {
+async function resetAiAnalysis() {
   const body = document.getElementById("ai-analysis-body");
+  const ticker = state.lastData?.ticker;
+  if (!ticker) return;
+
+  // Check if a cached report already exists for this ticker
+  try {
+    const res = await fetch(`${API_BASE}/api/premium/ai-status/${ticker}`, { headers: apiHeaders() });
+    if (res.ok) {
+      const status = await res.json();
+      if (status.cached) {
+        // Report is ready — load it automatically
+        runAiAnalysis();
+        return;
+      }
+    }
+  } catch { /* silent — fall through to button */ }
+
   body.innerHTML = `<button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>`;
-  document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+  document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis());
 }
 
 async function runAiAnalysis(forceRefresh = false) {
