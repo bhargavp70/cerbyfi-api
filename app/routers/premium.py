@@ -29,7 +29,7 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
                 headers={**_ANTHROPIC_HEADERS, "x-api-key": settings.claude_api_key},
                 json={
                     "model": "claude-sonnet-4-6",
-                    "max_tokens": 2500,
+                    "max_tokens": 5000,
                     "tools": [_WEB_SEARCH_TOOL],
                     "messages": messages,
                 },
@@ -49,9 +49,16 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
         if stop_reason == "end_turn":
             texts = [b["text"] for b in content if b.get("type") == "text"]
             result = "\n\n".join(texts).strip()
-            # Strip any "thinking aloud" preamble before the first section heading
+            # Strip preamble before first section heading
             if "## " in result:
                 result = result[result.index("## "):]
+            # Remove standalone thinking lines (Claude narrating its own process)
+            import re as _re
+            result = _re.sub(
+                r'^(Now I (have|will|can)|Let me (now |compile|write|search|look)|'
+                r'I(\'ll| will| now| have enough| need to))[^\n]*\n?',
+                '', result, flags=_re.MULTILINE | _re.IGNORECASE
+            ).strip()
             return result
 
         if stop_reason == "tool_use":

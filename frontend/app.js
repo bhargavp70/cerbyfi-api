@@ -607,23 +607,26 @@ async function runAiAnalysis(forceRefresh = false) {
 
     // Convert markdown to styled HTML
     const html = escHtml(result.text)
-      // ## Section headings
+      // ## Section headings (must come first — line-based)
       .replace(/^## (.+)$/gm, "<h3>$1</h3>")
       // Numbered list items
       .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
       // Bullet points
-      .replace(/^[•\-] (.+)$/gm, "<li>$1</li>")
+      .replace(/^[•\-\*] (.+)$/gm, "<li>$1</li>")
       // Wrap consecutive <li> in <ul>
       .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
       // Bold text
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // Paragraph breaks
+      // Join single newlines within prose into spaces (Claude often wraps long lines)
+      // Only collapse \n that are NOT part of a blank line (\n\n) and not adjacent to tags
+      .replace(/([^>\n])\n([^<\n])/g, "$1 $2")
+      // Paragraph breaks on blank lines
       .replace(/\n{2,}/g, "</p><p>")
       // Wrap in paragraph
       .replace(/^(?!<[hul])/, "<p>")
       .replace(/$(?!<\/[hul])/, "</p>")
       // Clean up empty paragraphs
-      .replace(/<p><\/p>/g, "")
+      .replace(/<p>\s*<\/p>/g, "")
       .replace(/<p>(<[hul])/g, "$1")
       .replace(/(<\/[hul][^>]*>)<\/p>/g, "$1");
 
