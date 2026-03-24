@@ -635,14 +635,16 @@ async function runAiAnalysis() {
       : `<span class="ai-cache-badge fresh">Generated now · Cached for 10 days</span>`;
 
     body.innerHTML = `
-      <div class="ai-analysis-header" style="margin-bottom:12px;">${cacheNote}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        ${cacheNote}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="ai-pdf-btn" class="ai-pdf-btn" style="font-size:0.78rem;padding:6px 14px;">↓ Download PDF</button>
+          ${auth.user?.can_refresh_ai ? `<button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">↺ Refresh</button>` : ""}
+        </div>
+      </div>
       <div class="ai-analysis-text" id="ai-report-content">${html}</div>
       <div class="ai-disclaimer">
         AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
-      </div>
-      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        ${auth.user?.can_refresh_ai ? `<button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">↺ Refresh research</button>` : ""}
-        <button id="ai-pdf-btn" class="ai-pdf-btn">↓ Download PDF</button>
       </div>`;
     if (auth.user?.can_refresh_ai) {
       document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
