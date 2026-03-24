@@ -756,24 +756,26 @@ async function downloadAiPdf() {
 
     </div>`;
 
-  const el = document.getElementById("pdf-source");
-  el.style.display = "block";
-  el.innerHTML = pdfHtml;
-
   const filename = `CerbyFi_${data.ticker}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+  // Create a temporary off-screen element — html2canvas requires the element
+  // to be in the DOM and visible (non-zero dimensions) to render correctly.
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;top:0;left:-9999px;width:794px;background:#fff;z-index:-1;";
+  el.innerHTML = pdfHtml;
+  document.body.appendChild(el);
 
   try {
     await html2pdf().set({
-      margin:      [10, 14, 10, 14],
+      margin:      [12, 16, 12, 16],
       filename,
-      image:       { type: "jpeg", quality: 0.97 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      image:       { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
       jsPDF:       { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak:   { mode: ["avoid-all", "css"] },
+      pagebreak:   { mode: "css", before: ".pdf-page-break" },
     }).from(el).save();
   } finally {
-    el.style.display = "none";
-    el.innerHTML = "";
+    document.body.removeChild(el);
     btn.disabled = false;
     btn.textContent = "↓ Download PDF";
   }
