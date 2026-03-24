@@ -211,8 +211,9 @@ function renderAdminUserList(users) {
 
     const isSelf      = u.id === auth.user?.id;
     const canToggleAdmin   = !u.is_protected && !isSelf;
-    const adminBadge  = u.is_admin   ? `<span class="admin-role-badge is-admin">Admin</span>`   : "";
-    const premiumBadge = u.is_premium ? `<span class="admin-role-badge is-premium">Premium</span>` : "";
+    const adminBadge   = u.is_admin        ? `<span class="admin-role-badge is-admin">Admin</span>`   : "";
+    const premiumBadge = u.is_premium      ? `<span class="admin-role-badge is-premium">Premium</span>` : "";
+    const refreshBadge = u.can_refresh_ai  ? `<span class="admin-role-badge is-refresh">Refresh</span>` : "";
 
     const adminBtn = canToggleAdmin
       ? (u.is_admin
@@ -224,13 +225,17 @@ function renderAdminUserList(users) {
       ? `<button class="admin-toggle-btn demote"  data-id="${u.id}" data-field="is_premium" data-val="false">Remove premium</button>`
       : `<button class="admin-toggle-btn promote" data-id="${u.id}" data-field="is_premium" data-val="true">Make premium</button>`;
 
+    const refreshBtn = u.can_refresh_ai
+      ? `<button class="admin-toggle-btn demote"  data-id="${u.id}" data-field="can_refresh_ai" data-val="false">Disable refresh</button>`
+      : `<button class="admin-toggle-btn promote" data-id="${u.id}" data-field="can_refresh_ai" data-val="true">Enable refresh</button>`;
+
     row.innerHTML = `
       <div class="admin-user-info">
         <div class="admin-user-name">${escHtml(u.name)}</div>
         <div class="admin-user-email">${escHtml(u.email)}</div>
       </div>
-      <div style="display:flex;gap:4px;flex-shrink:0;">${adminBadge}${premiumBadge}</div>
-      <div style="display:flex;gap:4px;flex-shrink:0;">${adminBtn}${premiumBtn}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBadge}${premiumBadge}${refreshBadge}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBtn}${premiumBtn}${refreshBtn}</div>
     `;
 
     row.querySelectorAll(".admin-toggle-btn").forEach(btn => {
@@ -636,14 +641,12 @@ async function runAiAnalysis() {
         AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
       </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        <button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">
-          ↺ Refresh research
-        </button>
-        <button id="ai-pdf-btn" class="ai-pdf-btn">
-          ↓ Download PDF
-        </button>
+        ${auth.user?.can_refresh_ai ? `<button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">↺ Refresh research</button>` : ""}
+        <button id="ai-pdf-btn" class="ai-pdf-btn">↓ Download PDF</button>
       </div>`;
-    document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+    if (auth.user?.can_refresh_ai) {
+      document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+    }
     document.getElementById("ai-pdf-btn").addEventListener("click", downloadAiPdf);
   } catch(err) {
     body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;

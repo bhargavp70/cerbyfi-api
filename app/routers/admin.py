@@ -26,6 +26,7 @@ def list_users(user_id: str = Depends(require_admin)):
             "email": u["email"],
             "is_admin": bool(u["is_admin"]),
             "is_premium": bool(u["is_premium"]),
+            "can_refresh_ai": bool(u["can_refresh_ai"]),
             "is_protected": u["email"] in settings.admin_email_set,
         }
         for u in users
@@ -47,5 +48,8 @@ def update_user(target_id: str, body: dict, user_id: str = Depends(require_admin
 
     if "is_premium" in body:
         score_db.set_premium(target_id, bool(body["is_premium"]))
+
+    if "can_refresh_ai" in body:
+        score_db.set_can_refresh_ai(target_id, bool(body["can_refresh_ai"]))
 
     return {"ok": True}

@@ -274,6 +274,11 @@ header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
   color: #c084fc;
   border: 1px solid rgba(167,139,250,0.35);
 }
+.admin-role-badge.is-refresh {
+  background: rgba(79,142,247,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(79,142,247,0.3);
+}
 .admin-toggle-btn {
   font-size: 0.78rem;
   padding: 4px 10px;

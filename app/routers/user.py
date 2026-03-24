@@ -54,7 +54,7 @@ def register(body: RegisterIn):
     is_admin = body.email in settings.admin_email_set
     score_db.create_user(user_id, body.email, body.name, hash_password(body.password), is_admin=is_admin)
     token = create_token(user_id)
-    return {"token": token, "user": {"id": user_id, "email": body.email, "name": body.name, "is_admin": is_admin, "is_premium": False}}
+    return {"token": token, "user": {"id": user_id, "email": body.email, "name": body.name, "is_admin": is_admin, "is_premium": False, "can_refresh_ai": False}}
 
 
 @router.post("/login")
@@ -63,7 +63,7 @@ def login(body: LoginIn):
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     token = create_token(user["id"])
-    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "is_admin": bool(user.get("is_admin")), "is_premium": bool(user.get("is_premium"))}}
+    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "is_admin": bool(user.get("is_admin")), "is_premium": bool(user.get("is_premium")), "can_refresh_ai": bool(user.get("can_refresh_ai"))}}
 
 
 @router.get("/me")
@@ -71,4 +71,4 @@ def me(user_id: str = Depends(require_user)):
     user = score_db.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    return {**user, "is_admin": bool(user.get("is_admin")), "is_premium": bool(user.get("is_premium"))}
+    return {**user, "is_admin": bool(user.get("is_admin")), "is_premium": bool(user.get("is_premium")), "can_refresh_ai": bool(user.get("can_refresh_ai"))}

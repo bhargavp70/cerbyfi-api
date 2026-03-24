@@ -40,9 +40,10 @@ CREATE TABLE IF NOT EXISTS users (
     email         TEXT UNIQUE NOT NULL,
     name          TEXT NOT NULL,
     password_hash TEXT NOT NULL,
-    is_admin      INTEGER NOT NULL DEFAULT 0,
-    is_premium    INTEGER NOT NULL DEFAULT 0,
-    created_at    REAL NOT NULL
+    is_admin         INTEGER NOT NULL DEFAULT 0,
+    is_premium       INTEGER NOT NULL DEFAULT 0,
+    can_refresh_ai   INTEGER NOT NULL DEFAULT 0,
+    created_at       REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS watchlist (
@@ -96,6 +97,7 @@ class ScoreDB:
             for col_sql in [
                 "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE users ADD COLUMN can_refresh_ai INTEGER NOT NULL DEFAULT 0",
             ]:
                 try:
                     self._conn.execute(col_sql)
@@ -197,7 +199,7 @@ class ScoreDB:
     def get_user_by_email(self, email: str) -> Optional[dict]:
         with self._lock:
             row = self._conn.execute(
-                "SELECT id, email, name, password_hash, is_admin, is_premium FROM users WHERE email=?",
+                "SELECT id, email, name, password_hash, is_admin, is_premium, can_refresh_ai FROM users WHERE email=?",
                 (email.lower().strip(),),
             ).fetchone()
         return dict(row) if row else None
@@ -210,14 +212,14 @@ class ScoreDB:
     def get_user_by_id(self, user_id: str) -> Optional[dict]:
         with self._lock:
             row = self._conn.execute(
-                "SELECT id, email, name, is_admin, is_premium FROM users WHERE id=?", (user_id,)
+                "SELECT id, email, name, is_admin, is_premium, can_refresh_ai FROM users WHERE id=?", (user_id,)
             ).fetchone()
         return dict(row) if row else None
 
     def list_users(self) -> list:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT id, email, name, is_admin, is_premium, created_at FROM users ORDER BY created_at ASC"
+                "SELECT id, email, name, is_admin, is_premium, can_refresh_ai, created_at FROM users ORDER BY created_at ASC"
             ).fetchall()
         return [dict(r) for r in rows]
 
@@ -233,6 +235,14 @@ class ScoreDB:
         with self._lock:
             cur = self._conn.execute(
                 "UPDATE users SET is_premium=? WHERE id=?", (int(is_premium), user_id)
+            )
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    def set_can_refresh_ai(self, user_id: str, enabled: bool) -> bool:
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE users SET can_refresh_ai=? WHERE id=?", (int(enabled), user_id)
             )
             self._conn.commit()
         return cur.rowcount > 0
