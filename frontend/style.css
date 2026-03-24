@@ -128,6 +128,19 @@ header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
 }
 .ai-analyze-btn:hover { opacity: 0.85; }
 .ai-analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-pdf-btn {
+  background: transparent;
+  border: 1px solid rgba(167,139,250,0.4);
+  color: #c084fc;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 9px 20px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-pdf-btn:hover { background: rgba(167,139,250,0.1); }
+.ai-pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .ai-analysis-text {
   font-size: 0.9rem;
   color: var(--text);

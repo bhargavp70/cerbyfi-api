@@ -631,16 +631,148 @@ async function runAiAnalysis() {
 
     body.innerHTML = `
       <div class="ai-analysis-header" style="margin-bottom:12px;">${cacheNote}</div>
-      <div class="ai-analysis-text">${html}</div>
+      <div class="ai-analysis-text" id="ai-report-content">${html}</div>
       <div class="ai-disclaimer">
         AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
       </div>
-      <button id="ai-analyze-btn" class="ai-analyze-btn" style="margin-top:14px;font-size:0.78rem;padding:6px 14px;">
-        ↺ Refresh research
-      </button>`;
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">
+          ↺ Refresh research
+        </button>
+        <button id="ai-pdf-btn" class="ai-pdf-btn">
+          ↓ Download PDF
+        </button>
+      </div>`;
     document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+    document.getElementById("ai-pdf-btn").addEventListener("click", downloadAiPdf);
   } catch(err) {
     body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;
+  }
+}
+
+async function downloadAiPdf() {
+  const data = state.lastData;
+  if (!data) return;
+
+  const btn = document.getElementById("ai-pdf-btn");
+  const reportContent = document.getElementById("ai-report-content");
+  if (!reportContent) return;
+
+  btn.disabled = true;
+  btn.textContent = "Preparing…";
+
+  const categoryRows = Object.values(data.categories).map(c => {
+    const pct = c.pct.toFixed(0);
+    const color = c.pct >= 70 ? "#4ade80" : c.pct >= 45 ? "#fbbf24" : "#f87171";
+    const barWidth = Math.round(c.pct);
+    return `
+      <tr>
+        <td style="padding:6px 12px 6px 0;font-size:13px;color:#334155;">${c.label}</td>
+        <td style="padding:6px 12px;font-size:13px;color:${color};font-weight:600;white-space:nowrap;">${c.score}/${c.max}</td>
+        <td style="padding:6px 0;width:140px;">
+          <div style="background:#e2e8f0;border-radius:3px;height:7px;width:100%;">
+            <div style="background:${color};border-radius:3px;height:7px;width:${barWidth}%;"></div>
+          </div>
+        </td>
+        <td style="padding:6px 0 6px 10px;font-size:12px;color:#64748b;">${pct}%</td>
+      </tr>`;
+  }).join("");
+
+  const starsHtml = "★".repeat(data.stars) + "☆".repeat(5 - data.stars);
+  const scoreColor = data.pct >= 70 ? "#16a34a" : data.pct >= 45 ? "#d97706" : "#dc2626";
+  const generatedDate = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
+  // Build a self-contained, print-friendly HTML document for html2pdf
+  const pdfHtml = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;max-width:700px;margin:0 auto;padding:0;">
+
+      <!-- Header -->
+      <div style="background:#0f172a;padding:28px 32px;border-radius:8px 8px 0 0;margin-bottom:0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">
+              Cerby<span style="color:#4f8ef7;">Fi</span>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:3px;text-transform:uppercase;letter-spacing:0.08em;">
+              AI Research Report · Premium
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:#94a3b8;">Generated ${generatedDate}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company header -->
+      <div style="background:#1e293b;padding:20px 32px 24px;margin-bottom:20px;border-radius:0 0 8px 8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${escHtml(data.name)}</div>
+            <div style="display:flex;gap:8px;margin-top:5px;align-items:center;">
+              <span style="background:#334155;color:#94a3b8;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">${escHtml(data.ticker)}</span>
+              <span style="background:#334155;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:4px;">${data.type === "fund" ? "ETF / Fund" : "Stock"}</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:36px;font-weight:800;color:${scoreColor};line-height:1;">${data.total}<span style="font-size:18px;color:#64748b;">/${data.max_total}</span></div>
+            <div style="color:#fbbf24;font-size:16px;margin-top:2px;">${starsHtml}</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${escHtml(data.rating_label)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score breakdown -->
+      <div style="margin-bottom:24px;padding:0 4px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:10px;">Score Breakdown</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <tbody>${categoryRows}</tbody>
+        </table>
+      </div>
+
+      <!-- Divider -->
+      <div style="border-top:1px solid #e2e8f0;margin:0 0 22px;"></div>
+
+      <!-- AI Analysis -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:14px;">AI Analysis · Claude Sonnet</div>
+      <div style="font-size:13.5px;line-height:1.75;color:#334155;">
+        ${reportContent.innerHTML
+          .replace(/<h3>/g, '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#4f46e5;margin:18px 0 7px;padding-bottom:5px;border-bottom:1px solid #e0e7ff;">')
+          .replace(/<\/h3>/g, '</div>')
+          .replace(/<ul>/g, '<ul style="list-style:none;padding:0;margin:0 0 10px;">')
+          .replace(/<li>/g, '<li style="padding:3px 0 3px 14px;position:relative;color:#475569;">• ')
+          .replace(/<p>/g, '<p style="margin:0 0 8px;color:#475569;">')
+        }
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;line-height:1.6;">
+        AI research by Claude · Based on publicly available information as of ${generatedDate} ·
+        For informational purposes only · Not financial advice · Always verify information independently before making investment decisions.
+        Data sources: Finnhub, Financial Modeling Prep, Yahoo Finance.
+      </div>
+
+    </div>`;
+
+  const el = document.getElementById("pdf-source");
+  el.style.display = "block";
+  el.innerHTML = pdfHtml;
+
+  const filename = `CerbyFi_${data.ticker}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+  try {
+    await html2pdf().set({
+      margin:      [10, 14, 10, 14],
+      filename,
+      image:       { type: "jpeg", quality: 0.97 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF:       { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak:   { mode: ["avoid-all", "css"] },
+    }).from(el).save();
+  } finally {
+    el.style.display = "none";
+    el.innerHTML = "";
+    btn.disabled = false;
+    btn.textContent = "↓ Download PDF";
   }
 }
 
