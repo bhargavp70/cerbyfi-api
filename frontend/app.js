@@ -44,11 +44,11 @@ async function initAuth() {
 function renderAuthState() {
   const el = document.getElementById("header-auth");
   if (auth.user) {
-    const adminBtn = auth.user.is_admin
-      ? `<button class="admin-badge" id="btn-admin">Admin</button>`
-      : "";
+    const adminBtn   = auth.user.is_admin   ? `<button class="admin-badge" id="btn-admin">Admin</button>` : "";
+    const premiumBadge = auth.user.is_premium ? `<span class="premium-header-badge">✦ Premium</span>` : "";
     el.innerHTML = `
       <span class="auth-name">Hi, ${escHtml(auth.user.name)}</span>
+      ${premiumBadge}
       ${adminBtn}
       <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
       <button class="auth-link" id="btn-signout">Sign out</button>
@@ -208,48 +208,46 @@ function renderAdminUserList(users) {
     const row = document.createElement("div");
     row.className = "admin-user-row";
 
-    const isSelf = u.id === auth.user?.id;
-    const canToggle = !u.is_protected && !isSelf;
-    const badgeClass = u.is_admin ? "is-admin" : "is-user";
-    const badgeText  = u.is_admin ? "Admin" : "User";
+    const isSelf      = u.id === auth.user?.id;
+    const canToggleAdmin   = !u.is_protected && !isSelf;
+    const adminBadge  = u.is_admin   ? `<span class="admin-role-badge is-admin">Admin</span>`   : "";
+    const premiumBadge = u.is_premium ? `<span class="admin-role-badge is-premium">Premium</span>` : "";
 
-    let actionHtml = "";
-    if (canToggle) {
-      if (u.is_admin) {
-        actionHtml = `<button class="admin-toggle-btn demote" data-id="${u.id}" data-admin="false">Remove admin</button>`;
-      } else {
-        actionHtml = `<button class="admin-toggle-btn promote" data-id="${u.id}" data-admin="true">Make admin</button>`;
-      }
-    }
+    const adminBtn = canToggleAdmin
+      ? (u.is_admin
+          ? `<button class="admin-toggle-btn demote"  data-id="${u.id}" data-field="is_admin"   data-val="false">Remove admin</button>`
+          : `<button class="admin-toggle-btn promote" data-id="${u.id}" data-field="is_admin"   data-val="true">Make admin</button>`)
+      : "";
+
+    const premiumBtn = u.is_premium
+      ? `<button class="admin-toggle-btn demote"  data-id="${u.id}" data-field="is_premium" data-val="false">Remove premium</button>`
+      : `<button class="admin-toggle-btn promote" data-id="${u.id}" data-field="is_premium" data-val="true">Make premium</button>`;
 
     row.innerHTML = `
       <div class="admin-user-info">
         <div class="admin-user-name">${escHtml(u.name)}</div>
         <div class="admin-user-email">${escHtml(u.email)}</div>
       </div>
-      <span class="admin-role-badge ${badgeClass}">${badgeText}</span>
-      ${actionHtml}
+      <div style="display:flex;gap:4px;flex-shrink:0;">${adminBadge}${premiumBadge}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">${adminBtn}${premiumBtn}</div>
     `;
 
-    if (canToggle) {
-      row.querySelector(".admin-toggle-btn").addEventListener("click", async e => {
-        const btn = e.currentTarget;
+    row.querySelectorAll(".admin-toggle-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
         btn.disabled = true;
-        const makeAdmin = btn.dataset.admin === "true";
+        const field = btn.dataset.field;
+        const val   = btn.dataset.val === "true";
         try {
           const res = await fetch(`${API_BASE}/api/admin/users/${u.id}`, {
             method: "PATCH",
             headers: apiHeaders(true),
-            body: JSON.stringify({ is_admin: makeAdmin }),
+            body: JSON.stringify({ [field]: val }),
           });
-          if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "Failed to update.");
-          }
+          if (!res.ok) { alert((await res.json()).detail || "Failed to update."); }
           await refreshAdminModal();
         } catch { btn.disabled = false; }
       });
-    }
+    });
 
     el.appendChild(row);
   });
@@ -443,6 +441,15 @@ function renderResults(data) {
   }
   resultsSection.style.display = "block";
 
+  // AI Analysis section — visible to premium users only
+  const aiSection = document.getElementById("ai-analysis-section");
+  if (auth.user?.is_premium) {
+    aiSection.style.display = "";
+    resetAiAnalysis();
+  } else {
+    aiSection.style.display = "none";
+  }
+
   // Refresh portfolio "add" button if a portfolio is open
   if (auth.user && portfolioState.activeId) {
     renderPortfolioDetail();
@@ -555,6 +562,86 @@ function setLoading(bool) {
   analyzeBtn.disabled = bool;
   analyzeBtn.classList.toggle("loading", bool);
   analyzeBtn.textContent = bool ? "Analyzing" : "Analyze";
+}
+
+// ── AI Analysis (premium) ─────────────────────────────────
+document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+
+function resetAiAnalysis() {
+  const body = document.getElementById("ai-analysis-body");
+  body.innerHTML = `<button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>`;
+  document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+}
+
+async function runAiAnalysis() {
+  if (!state.lastData || !window.CLAUDE_API_KEY) return;
+  const data = state.lastData;
+  const body = document.getElementById("ai-analysis-body");
+
+  body.innerHTML = `<div style="color:var(--muted);font-size:0.88rem;"><span class="ai-spinner"></span>Analyzing with Claude…</div>`;
+
+  const categoryText = Object.values(data.categories)
+    .map(c => `- ${c.label}: ${c.score}/${c.max} (${c.pct.toFixed(0)}%)`)
+    .join("\n");
+
+  const prompt = `You are a concise financial analyst assistant. Here is the CerbyFi score report for ${data.name} (${data.ticker}):
+
+Overall score: ${data.total}/${data.max_total} (${data.pct.toFixed(0)}%) — ${data.rating_label}
+
+Category breakdown:
+${categoryText}
+
+Respond with exactly these four sections using these headings:
+**Summary**
+2 sentences on the company's overall financial health.
+
+**Strengths**
+The 2 strongest scoring areas and why they matter to investors.
+
+**Concerns**
+The 2 weakest areas an investor should investigate further.
+
+**Question to ask**
+One specific question a retail investor should research before buying.
+
+Keep responses factual, grounded in the scores above. Do not make buy or sell recommendations.`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": window.CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-calls": "true",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">AI analysis failed: ${escHtml(err.error?.message || "Unknown error")}</div>`;
+      return;
+    }
+
+    const result = await res.json();
+    const text = result.content[0].text;
+
+    // Render markdown-style bold headings
+    const html = escHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, "<h4>$1</h4>")
+      .replace(/\n{2,}/g, "\n");
+
+    body.innerHTML = `<div class="ai-analysis-text">${html}</div>
+      <button id="ai-analyze-btn" class="ai-analyze-btn" style="margin-top:14px;font-size:0.78rem;padding:6px 14px;">Regenerate</button>`;
+    document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+  } catch {
+    body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Could not reach AI service.</div>`;
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────

@@ -57,8 +57,9 @@ def frontend_config():
     """Injects the client API key into the browser without storing it in a static file."""
     from fastapi.responses import Response
     key = settings.cerbyfi_api_key or ""
+    claude_key = settings.claude_api_key or ""
     return Response(
-        content=f"window.CERBYFI_API_KEY = '{key}';",
+        content=f"window.CERBYFI_API_KEY = '{key}';\nwindow.CLAUDE_API_KEY = '{claude_key}';",
         media_type="application/javascript",
     )
 

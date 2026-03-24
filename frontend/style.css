@@ -73,6 +73,88 @@ header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
 }
 .auth-link.primary:hover { opacity: 0.85; }
 .auth-name { font-size: 0.85rem; color: var(--text); }
+
+/* ── Premium badge (header) ── */
+.premium-header-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(236,72,153,0.15));
+  color: #c084fc;
+  border: 1px solid rgba(167,139,250,0.35);
+  letter-spacing: 0.04em;
+}
+
+/* ── AI Analysis card ── */
+.ai-analysis-card {
+  background: linear-gradient(135deg, rgba(167,139,250,0.07), rgba(79,142,247,0.05));
+  border: 1px solid rgba(167,139,250,0.25);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+.ai-analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ai-analysis-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.premium-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(236,72,153,0.15));
+  color: #c084fc;
+  border: 1px solid rgba(167,139,250,0.35);
+  letter-spacing: 0.04em;
+}
+.ai-analyze-btn {
+  background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(79,142,247,0.15));
+  border: 1px solid rgba(167,139,250,0.4);
+  color: #c084fc;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 9px 20px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-analyze-btn:hover { opacity: 0.85; }
+.ai-analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-analysis-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+.ai-analysis-text h4 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #c084fc;
+  margin: 14px 0 5px;
+}
+.ai-analysis-text h4:first-child { margin-top: 0; }
+.ai-spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(192,132,252,0.3);
+  border-top-color: #c084fc;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .admin-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -126,6 +208,11 @@ header p { color: var(--muted); margin-top: 4px; font-size: 0.88rem; }
   background: var(--surface2);
   color: var(--muted);
   border: 1px solid var(--border);
+}
+.admin-role-badge.is-premium {
+  background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(236,72,153,0.15));
+  color: #c084fc;
+  border: 1px solid rgba(167,139,250,0.35);
 }
 .admin-toggle-btn {
   font-size: 0.78rem;
