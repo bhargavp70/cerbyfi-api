@@ -49,17 +49,20 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
         if stop_reason == "end_turn":
             texts = [b["text"] for b in content if b.get("type") == "text"]
             result = "\n\n".join(texts).strip()
-            # Strip preamble before first section heading
+            import re as _re
+            # Remove H1 title lines Claude sometimes adds (# Title)
+            result = _re.sub(r'^# [^\n]*\n?', '', result, flags=_re.MULTILINE)
+            # Remove horizontal rules
+            result = _re.sub(r'^-{3,}\n?', '', result, flags=_re.MULTILINE)
+            # Remove thinking/narration lines
+            result = _re.sub(
+                r'^(Now I |Let me |I\'ll |I will |I have |Excellent[,!]|Great[,!]|Perfect[,!])[^\n]*\n?',
+                '', result, flags=_re.MULTILINE | _re.IGNORECASE
+            )
+            # Strip anything before the first ## section heading
             if "## " in result:
                 result = result[result.index("## "):]
-            # Remove standalone thinking lines (Claude narrating its own process)
-            import re as _re
-            result = _re.sub(
-                r'^(Now I (have|will|can)|Let me (now |compile|write|search|look)|'
-                r'I(\'ll| will| now| have enough| need to))[^\n]*\n?',
-                '', result, flags=_re.MULTILINE | _re.IGNORECASE
-            ).strip()
-            return result
+            return result.strip()
 
         if stop_reason == "tool_use":
             # Append assistant turn, then send tool results back
@@ -155,6 +158,8 @@ List 5–6 specific, named sources where the investor can learn more: e.g. speci
 
 ---
 Important:
+- Start your response DIRECTLY with "## The Company & Its Story" — no title, no preamble, no horizontal rules.
+- Do not narrate your research process or say things like "Let me compile" or "Now I have enough information".
 - Be factual and specific. No vague platitudes.
 - Do not give buy/sell recommendations.
 - If you cannot find current information for a section, say so clearly rather than speculating.
