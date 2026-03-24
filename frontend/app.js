@@ -655,137 +655,202 @@ async function runAiAnalysis() {
   }
 }
 
-async function downloadAiPdf() {
+function downloadAiPdf() {
   const data = state.lastData;
   if (!data) return;
 
-  const btn = document.getElementById("ai-pdf-btn");
   const reportContent = document.getElementById("ai-report-content");
   if (!reportContent) return;
 
-  btn.disabled = true;
-  btn.textContent = "Preparing…";
-
   const categoryRows = Object.values(data.categories).map(c => {
     const pct = c.pct.toFixed(0);
-    const color = c.pct >= 70 ? "#4ade80" : c.pct >= 45 ? "#fbbf24" : "#f87171";
+    const color = c.pct >= 70 ? "#16a34a" : c.pct >= 45 ? "#d97706" : "#dc2626";
     const barWidth = Math.round(c.pct);
-    return `
-      <tr>
-        <td style="padding:6px 12px 6px 0;font-size:13px;color:#334155;">${c.label}</td>
-        <td style="padding:6px 12px;font-size:13px;color:${color};font-weight:600;white-space:nowrap;">${c.score}/${c.max}</td>
-        <td style="padding:6px 0;width:140px;">
-          <div style="background:#e2e8f0;border-radius:3px;height:7px;width:100%;">
-            <div style="background:${color};border-radius:3px;height:7px;width:${barWidth}%;"></div>
-          </div>
-        </td>
-        <td style="padding:6px 0 6px 10px;font-size:12px;color:#64748b;">${pct}%</td>
-      </tr>`;
+    return `<tr>
+      <td class="td-label">${escHtml(c.label)}</td>
+      <td class="td-score" style="color:${color}">${c.score}/${c.max}</td>
+      <td class="td-bar">
+        <div class="bar-bg"><div class="bar-fg" style="background:${color};width:${barWidth}%"></div></div>
+      </td>
+      <td class="td-pct">${pct}%</td>
+    </tr>`;
   }).join("");
 
   const starsHtml = "★".repeat(data.stars) + "☆".repeat(5 - data.stars);
   const scoreColor = data.pct >= 70 ? "#16a34a" : data.pct >= 45 ? "#d97706" : "#dc2626";
   const generatedDate = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-  // Build a self-contained, print-friendly HTML document for html2pdf.
-  // - No max-width/centering: let it fill the full PDF page width.
-  // - padding built into the wrapper (margin:0 on html2pdf options).
-  // - page-break-inside:avoid on every section to prevent mid-line cuts.
-  const pdfHtml = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;width:100%;padding:12mm 14mm;box-sizing:border-box;background:#ffffff;">
+  const aiHtml = reportContent.innerHTML
+    .replace(/<h3>/g, '<h3 class="ai-h3">')
+    .replace(/<ul>/g, '<ul class="ai-ul">');
 
-      <!-- Header -->
-      <div style="background:#0f172a;padding:28px 32px;border-radius:8px 8px 0 0;margin-bottom:0;page-break-inside:avoid;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
-            <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">
-              Cerby<span style="color:#4f8ef7;">Fi</span>
-            </div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:3px;text-transform:uppercase;letter-spacing:0.08em;">
-              AI Research Report · Premium
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:11px;color:#94a3b8;">Generated ${generatedDate}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Company header -->
-      <div style="background:#1e293b;padding:20px 32px 24px;margin-bottom:20px;border-radius:0 0 8px 8px;page-break-inside:avoid;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-          <div>
-            <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${escHtml(data.name)}</div>
-            <div style="display:flex;gap:8px;margin-top:5px;align-items:center;">
-              <span style="background:#334155;color:#94a3b8;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">${escHtml(data.ticker)}</span>
-              <span style="background:#334155;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:4px;">${data.type === "fund" ? "ETF / Fund" : "Stock"}</span>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:36px;font-weight:800;color:${scoreColor};line-height:1;">${data.total}<span style="font-size:18px;color:#64748b;">/${data.max_total}</span></div>
-            <div style="color:#fbbf24;font-size:16px;margin-top:2px;">${starsHtml}</div>
-            <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${escHtml(data.rating_label)}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Score breakdown -->
-      <div style="margin-bottom:24px;padding:0 4px;page-break-inside:avoid;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:10px;">Score Breakdown</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tbody>${categoryRows}</tbody>
-        </table>
-      </div>
-
-      <!-- Divider -->
-      <div style="border-top:1px solid #e2e8f0;margin:0 0 22px;"></div>
-
-      <!-- AI Analysis -->
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:14px;">AI Analysis · Claude Sonnet</div>
-      <div style="font-size:13.5px;line-height:1.75;color:#334155;">
-        ${reportContent.innerHTML
-          .replace(/<h3>/g, '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#4f46e5;margin:18px 0 7px;padding-bottom:5px;border-bottom:1px solid #e0e7ff;">')
-          .replace(/<\/h3>/g, '</div>')
-          .replace(/<ul>/g, '<ul style="list-style:none;padding:0;margin:0 0 10px;">')
-          .replace(/<li>/g, '<li style="padding:3px 0 3px 14px;position:relative;color:#475569;">• ')
-          .replace(/<p>/g, '<p style="margin:0 0 8px;color:#475569;">')
-        }
-      </div>
-
-      <!-- Footer -->
-      <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;line-height:1.6;">
-        AI research by Claude · Based on publicly available information as of ${generatedDate} ·
-        For informational purposes only · Not financial advice · Always verify information independently before making investment decisions.
-        Data sources: Finnhub, Financial Modeling Prep, Yahoo Finance.
-      </div>
-
-    </div>`;
-
-  const filename = `CerbyFi_${data.ticker}_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-  // Pass the HTML string directly — html2pdf creates and manages the DOM element
-  // internally, which avoids all viewport/clipping issues with html2canvas.
-  // - margin:0 because padding is built into pdfHtml wrapper
-  // - scale:1.5 avoids browser canvas-height limits on long reports
-  // - pagebreak mode splits the canvas at page boundaries so text isn't cut mid-line
-  try {
-    await html2pdf().set({
-      margin:      0,
-      filename,
-      image:       { type: "jpeg", quality: 0.95 },
-      html2canvas: {
-        scale:           1.5,
-        useCORS:         true,
-        backgroundColor: "#ffffff",
-        logging:         false,
-      },
-      jsPDF:     { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-    }).from(pdfHtml).save();
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "↓ Download PDF";
+  const win = window.open("", "_blank");
+  if (!win) {
+    alert("Please allow popups for this site to download the PDF.");
+    return;
   }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CerbyFi · ${escHtml(data.ticker)} · AI Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page { size: A4; margin: 14mm 16mm; }
+
+  /* ── Screen wrapper ── */
+  .page { max-width: 740px; margin: 0 auto; padding: 24px; }
+
+  /* ── Print button (screen only) ── */
+  .print-bar {
+    text-align: center;
+    padding: 16px 0 24px;
+  }
+  .print-bar button {
+    background: #4f46e5; color: #fff; border: none;
+    padding: 11px 32px; border-radius: 6px; font-size: 15px;
+    cursor: pointer; font-weight: 600;
+  }
+  @media print { .print-bar { display: none; } }
+
+  /* ── Header band ── */
+  .hdr {
+    background: #0f172a;
+    color: #fff;
+    padding: 22px 28px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    page-break-inside: avoid;
+  }
+  .hdr-brand { font-size: 21px; font-weight: 800; letter-spacing: -0.4px; }
+  .hdr-brand span { color: #4f8ef7; }
+  .hdr-sub { font-size: 10px; color: #94a3b8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .hdr-date { font-size: 11px; color: #94a3b8; text-align: right; }
+
+  /* ── Company band ── */
+  .co {
+    background: #1e293b;
+    color: #f1f5f9;
+    padding: 18px 28px 22px;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    page-break-inside: avoid;
+  }
+  .co-name { font-size: 19px; font-weight: 700; }
+  .co-badges { display: flex; gap: 7px; margin-top: 5px; }
+  .badge { background: #334155; color: #94a3b8; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .score-num { font-size: 34px; font-weight: 800; line-height: 1; text-align: right; }
+  .score-denom { font-size: 16px; color: #64748b; }
+  .stars { color: #fbbf24; font-size: 15px; margin-top: 2px; text-align: right; }
+  .rating { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 2px; }
+
+  /* ── Score table ── */
+  .section { margin-bottom: 22px; page-break-inside: avoid; }
+  .section-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #64748b; margin-bottom: 10px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  .td-label { padding: 5px 10px 5px 0; font-size: 13px; color: #334155; }
+  .td-score { padding: 5px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .td-bar { padding: 5px 0; width: 130px; }
+  .td-pct { padding: 5px 0 5px 8px; font-size: 11px; color: #64748b; }
+  .bar-bg { background: #e2e8f0; border-radius: 3px; height: 6px; width: 100%; }
+  .bar-fg { border-radius: 3px; height: 6px; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 4px 0 20px; }
+
+  /* ── AI text ── */
+  .ai-body { font-size: 13.5px; line-height: 1.75; color: #334155; }
+  .ai-body .ai-h3 {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #4f46e5;
+    margin: 18px 0 7px; padding-bottom: 5px;
+    border-bottom: 1px solid #e0e7ff;
+    page-break-after: avoid;
+  }
+  .ai-body p { margin: 0 0 8px; color: #475569; }
+  .ai-body .ai-ul { list-style: none; padding: 0; margin: 0 0 10px; }
+  .ai-body .ai-ul li { padding: 3px 0 3px 14px; color: #475569; }
+  .ai-body .ai-ul li::before { content: "• "; }
+  .ai-body strong { color: #1e293b; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 26px; padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 9.5px; color: #94a3b8; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="print-bar">
+    <button onclick="window.print()">Save as PDF</button>
+  </div>
+
+  <div class="hdr">
+    <div>
+      <div class="hdr-brand">Cerby<span>Fi</span></div>
+      <div class="hdr-sub">AI Research Report &middot; Premium</div>
+    </div>
+    <div class="hdr-date">Generated ${escHtml(generatedDate)}</div>
+  </div>
+
+  <div class="co">
+    <div>
+      <div class="co-name">${escHtml(data.name)}</div>
+      <div class="co-badges">
+        <span class="badge">${escHtml(data.ticker)}</span>
+        <span class="badge">${data.type === "fund" ? "ETF / Fund" : "Stock"}</span>
+      </div>
+    </div>
+    <div>
+      <div class="score-num" style="color:${scoreColor}">${data.total}<span class="score-denom">/${data.max_total}</span></div>
+      <div class="stars">${starsHtml}</div>
+      <div class="rating">${escHtml(data.rating_label)}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Score Breakdown</div>
+    <table><tbody>${categoryRows}</tbody></table>
+  </div>
+
+  <hr>
+
+  <div class="section">
+    <div class="section-label">AI Analysis &middot; Claude Sonnet</div>
+    <div class="ai-body">${aiHtml}</div>
+  </div>
+
+  <div class="footer">
+    AI research by Claude &middot; Based on publicly available information as of ${escHtml(generatedDate)} &middot;
+    For informational purposes only &middot; Not financial advice &middot;
+    Always verify information independently before making investment decisions.
+    Data sources: Finnhub, Financial Modeling Prep, Yahoo Finance.
+  </div>
+
+</div>
+</body>
+</html>`);
+  win.document.close();
 }
 
 // ── Init ──────────────────────────────────────────────────
