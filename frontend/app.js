@@ -703,17 +703,6 @@ function downloadAiPdf() {
   /* ── Screen wrapper ── */
   .page { max-width: 740px; margin: 0 auto; padding: 24px; }
 
-  /* ── Print button (screen only) ── */
-  .print-bar {
-    text-align: center;
-    padding: 16px 0 24px;
-  }
-  .print-bar button {
-    background: #4f46e5; color: #fff; border: none;
-    padding: 11px 32px; border-radius: 6px; font-size: 15px;
-    cursor: pointer; font-weight: 600;
-  }
-  @media print { .print-bar { display: none; } }
 
   /* ── Header band ── */
   .hdr {
@@ -794,10 +783,6 @@ function downloadAiPdf() {
 </head>
 <body>
 <div class="page">
-
-  <div class="print-bar">
-    <button onclick="window.print()">Save as PDF</button>
-  </div>
 
   <div class="hdr">
     <div>
