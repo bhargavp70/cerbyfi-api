@@ -760,21 +760,28 @@ async function downloadAiPdf() {
 
   const filename = `CerbyFi_${data.ticker}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-  // Create a temporary off-screen element — html2canvas requires the element
-  // to be in the DOM and visible (non-zero dimensions) to render correctly.
+  // position:fixed keeps the element within the viewport regardless of scroll,
+  // so html2canvas always sees it. Wait one frame after append for the browser
+  // to paint it before capture begins.
   const el = document.createElement("div");
-  el.style.cssText = "position:fixed;top:0;left:-9999px;width:794px;background:#fff;z-index:-1;";
+  el.style.cssText = "position:fixed;top:0;left:0;z-index:99999;width:794px;background:#ffffff;padding:0;overflow:visible;";
   el.innerHTML = pdfHtml;
   document.body.appendChild(el);
+
+  await new Promise(r => setTimeout(r, 60));
 
   try {
     await html2pdf().set({
       margin:      [12, 16, 12, 16],
       filename,
       image:       { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF:       { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak:   { mode: "css", before: ".pdf-page-break" },
+      html2canvas: {
+        scale:           2,
+        useCORS:         true,
+        backgroundColor: "#ffffff",
+        logging:         false,
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     }).from(el).save();
   } finally {
     document.body.removeChild(el);
