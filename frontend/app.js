@@ -577,19 +577,18 @@ async function resetAiAnalysis() {
   const body = document.getElementById("ai-analysis-body");
   if (!state.lastData) return;
 
-  // One call: returns cached report if available, or {no_cache:true} if not
+  body.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;">Checking for report…</div>`;
+
   try {
     const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
       method: "POST",
       headers: apiHeaders(true),
       body: JSON.stringify({ data: state.lastData, check_only: true }),
     });
-    if (res.ok) {
-      const result = await res.json();
-      if (!result.no_cache) {
-        renderAiResult(result, body);
-        return;
-      }
+    const result = await res.json();
+    if (res.ok && !result.no_cache) {
+      renderAiResult(result, body);
+      return;
     }
   } catch { /* silent */ }
 
