@@ -760,16 +760,8 @@ async function downloadAiPdf() {
 
   const filename = `CerbyFi_${data.ticker}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-  // position:fixed keeps the element within the viewport regardless of scroll,
-  // so html2canvas always sees it. Wait one frame after append for the browser
-  // to paint it before capture begins.
-  const el = document.createElement("div");
-  el.style.cssText = "position:fixed;top:0;left:0;z-index:99999;width:794px;background:#ffffff;padding:0;overflow:visible;";
-  el.innerHTML = pdfHtml;
-  document.body.appendChild(el);
-
-  await new Promise(r => setTimeout(r, 60));
-
+  // Pass the HTML string directly — html2pdf creates and manages the DOM element
+  // internally, which avoids all viewport/clipping issues with html2canvas.
   try {
     await html2pdf().set({
       margin:      [12, 16, 12, 16],
@@ -782,9 +774,8 @@ async function downloadAiPdf() {
         logging:         false,
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(el).save();
+    }).from(pdfHtml).save();
   } finally {
-    document.body.removeChild(el);
     btn.disabled = false;
     btn.textContent = "↓ Download PDF";
   }
