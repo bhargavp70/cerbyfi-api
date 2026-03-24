@@ -575,21 +575,23 @@ document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysi
 
 async function resetAiAnalysis() {
   const body = document.getElementById("ai-analysis-body");
-  const ticker = state.lastData?.ticker;
-  if (!ticker) return;
+  if (!state.lastData) return;
 
-  // Check if a cached report already exists for this ticker
+  // One call: returns cached report if available, or {no_cache:true} if not
   try {
-    const res = await fetch(`${API_BASE}/api/premium/ai-status/${ticker}`, { headers: apiHeaders() });
+    const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
+      method: "POST",
+      headers: apiHeaders(true),
+      body: JSON.stringify({ data: state.lastData, check_only: true }),
+    });
     if (res.ok) {
-      const status = await res.json();
-      if (status.cached) {
-        // Report is ready — load it automatically
-        runAiAnalysis();
+      const result = await res.json();
+      if (!result.no_cache) {
+        renderAiResult(result, body);
         return;
       }
     }
-  } catch { /* silent — fall through to button */ }
+  } catch { /* silent */ }
 
   body.innerHTML = `<button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>`;
   document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis());
@@ -621,58 +623,51 @@ async function runAiAnalysis(forceRefresh = false) {
       return;
     }
 
-    // Convert markdown to styled HTML
-    const html = escHtml(result.text)
-      // All heading levels (##, ###, ####) → <h3>
-      .replace(/^#{2,4} (.+)$/gm, "<h3>$1</h3>")
-      // Numbered list items (skip lines already turned into headings)
-      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
-      // Bullet points
-      .replace(/^[•\-\*] (.+)$/gm, "<li>$1</li>")
-      // Wrap consecutive <li> in <ul>
-      .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-      // Bold text
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // Protect double newlines (paragraph breaks) with a placeholder,
-      // collapse ALL remaining single newlines to spaces, then restore.
-      // This reliably fixes mid-sentence line wraps from Claude's output.
-      .replace(/\n{2,}/g, "\x00")
-      .replace(/\n/g, " ")
-      .replace(/\x00/g, "</p><p>")
-      // Wrap in paragraph
-      .replace(/^(?!<[hup])/, "<p>")
-      .replace(/$(?!<\/[hup])/, "</p>")
-      // Clean up empty paragraphs and tag wrapping artefacts
-      .replace(/<p>\s*<\/p>/g, "")
-      .replace(/<p>(<[hup])/g, "$1")
-      .replace(/(<\/[hup][^>]*>)<\/p>/g, "$1");
-
-    const generatedDate = result.generated_at
-      ? new Date(result.generated_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-      : "";
-    const cacheNote = result.cached
-      ? `<span class="ai-cache-badge">Cached · Generated ${generatedDate}</span>`
-      : `<span class="ai-cache-badge fresh">Generated now · Cached for 10 days</span>`;
-
-    body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-        ${cacheNote}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button id="ai-pdf-btn" class="ai-pdf-btn" style="font-size:0.78rem;padding:6px 14px;">↓ Download PDF</button>
-          ${auth.user?.can_refresh_ai ? `<button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">↺ Refresh</button>` : ""}
-        </div>
-      </div>
-      <div class="ai-analysis-text" id="ai-report-content">${html}</div>
-      <div class="ai-disclaimer">
-        AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
-      </div>`;
-    if (auth.user?.can_refresh_ai) {
-      document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis(true));
-    }
-    document.getElementById("ai-pdf-btn").addEventListener("click", downloadAiPdf);
+    renderAiResult(result, body);
   } catch(err) {
     body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;
   }
+}
+
+function renderAiResult(result, body) {
+  const html = escHtml(result.text)
+    .replace(/^#{2,4} (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
+    .replace(/^[•\-\*] (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n{2,}/g, "\x00")
+    .replace(/\n/g, " ")
+    .replace(/\x00/g, "</p><p>")
+    .replace(/^(?!<[hup])/, "<p>")
+    .replace(/$(?!<\/[hup])/, "</p>")
+    .replace(/<p>\s*<\/p>/g, "")
+    .replace(/<p>(<[hup])/g, "$1")
+    .replace(/(<\/[hup][^>]*>)<\/p>/g, "$1");
+
+  const generatedDate = result.generated_at
+    ? new Date(result.generated_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    : "";
+  const cacheNote = result.cached
+    ? `<span class="ai-cache-badge">Cached · Generated ${generatedDate}</span>`
+    : `<span class="ai-cache-badge fresh">Generated now · Cached for 10 days</span>`;
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+      ${cacheNote}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="ai-pdf-btn" class="ai-pdf-btn" style="font-size:0.78rem;padding:6px 14px;">↓ Download PDF</button>
+        ${auth.user?.can_refresh_ai ? `<button id="ai-analyze-btn" class="ai-analyze-btn" style="font-size:0.78rem;padding:6px 14px;">↺ Refresh</button>` : ""}
+      </div>
+    </div>
+    <div class="ai-analysis-text" id="ai-report-content">${html}</div>
+    <div class="ai-disclaimer">
+      AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
+    </div>`;
+  if (auth.user?.can_refresh_ai) {
+    document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis(true));
+  }
+  document.getElementById("ai-pdf-btn").addEventListener("click", downloadAiPdf);
 }
 
 function downloadAiPdf() {
