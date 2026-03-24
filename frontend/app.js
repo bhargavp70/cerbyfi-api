@@ -587,7 +587,7 @@ async function runAiAnalysis(forceRefresh = false) {
     <div style="color:var(--muted);font-size:0.88rem;line-height:1.7;">
       <span class="ai-spinner"></span>${forceRefresh ? "Refreshing" : "Researching"} ${escHtml(state.lastData.ticker)} with Claude…
       <div style="font-size:0.78rem;margin-top:6px;color:var(--muted);opacity:0.7;">
-        Searching news, analyst opinions, and sentiment. This takes 20–40 seconds.
+        Searching news, analyst opinions, and sentiment. This takes 30–90 seconds.
       </div>
     </div>`;
 

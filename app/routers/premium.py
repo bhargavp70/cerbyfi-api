@@ -33,7 +33,7 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
                     "tools": [_WEB_SEARCH_TOOL],
                     "messages": messages,
                 },
-                timeout=90,
+                timeout=180,
             )
         except requests.RequestException as e:
             raise HTTPException(status_code=502, detail=f"Could not reach AI service: {e}")
