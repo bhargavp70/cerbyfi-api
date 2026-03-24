@@ -684,13 +684,7 @@ function downloadAiPdf() {
     .replace(/<h3>/g, '<h3 class="ai-h3">')
     .replace(/<ul>/g, '<ul class="ai-ul">');
 
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("Please allow popups for this site to download the PDF.");
-    return;
-  }
-
-  win.document.write(`<!DOCTYPE html>
+  const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -849,8 +843,18 @@ function downloadAiPdf() {
 
 </div>
 </body>
-</html>`);
-  win.document.close();
+</html>`;
+
+  // Use a Blob URL — far more reliable than window.open("","_blank") + document.write,
+  // which can replace the current tab in some browsers.
+  const blob = new Blob([fullHtml], { type: "text/html; charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const tab  = window.open(url, "_blank");
+  if (!tab) {
+    alert("Please allow popups for this site to open the PDF report.");
+  }
+  // Revoke the blob URL after 2 minutes to free memory
+  setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
 // ── Init ──────────────────────────────────────────────────
