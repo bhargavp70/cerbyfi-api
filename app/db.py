@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS score_cache (
     stored_at  REAL    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ai_analysis_cache (
+    ticker      TEXT PRIMARY KEY,
+    text        TEXT    NOT NULL,
+    generated_at REAL   NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS lookups (
     ticker      TEXT    NOT NULL,
     asset_type  TEXT    NOT NULL,
@@ -379,6 +385,56 @@ class ScoreDB:
             )
             self._conn.commit()
         return cur.rowcount > 0
+
+    # ── AI Analysis cache ─────────────────────────────────────
+
+    _AI_CACHE_TTL = 10 * 24 * 3600  # 10 days
+
+    def count_ai_cache(self) -> int:
+        cutoff = time.time() - self._AI_CACHE_TTL
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT COUNT(*) FROM ai_analysis_cache WHERE generated_at > ?", (cutoff,)
+            ).fetchone()
+        return int(row[0])
+
+    def get_ai_analysis(self, ticker: str) -> Optional[str]:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT text, generated_at FROM ai_analysis_cache WHERE ticker=?",
+                (ticker.upper(),),
+            ).fetchone()
+        if row is None:
+            return None
+        if time.time() - row["generated_at"] > self._AI_CACHE_TTL:
+            with self._lock:
+                self._conn.execute(
+                    "DELETE FROM ai_analysis_cache WHERE ticker=?", (ticker.upper(),)
+                )
+                self._conn.commit()
+            return None
+        return row["text"]
+
+    def set_ai_analysis(self, ticker: str, text: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO ai_analysis_cache (ticker, text, generated_at) VALUES (?,?,?)",
+                (ticker.upper(), text, time.time()),
+            )
+            self._conn.commit()
+
+    def ai_analysis_cache_info(self, ticker: str) -> Optional[float]:
+        """Returns generated_at timestamp if a live cache entry exists, else None."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT generated_at FROM ai_analysis_cache WHERE ticker=?",
+                (ticker.upper(),),
+            ).fetchone()
+        if row is None:
+            return None
+        if time.time() - row["generated_at"] > self._AI_CACHE_TTL:
+            return None
+        return row["generated_at"]
 
 
 score_db = ScoreDB(db_path=settings.db_path, ttl_seconds=settings.cache_ttl_seconds)

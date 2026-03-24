@@ -193,6 +193,7 @@ async function refreshAdminModal() {
       const data = await statsRes.json();
       document.getElementById("admin-user-count").textContent = data.user_count.toLocaleString();
       document.getElementById("admin-analyses-count").textContent = data.total_analyses.toLocaleString();
+      document.getElementById("admin-ai-cache-count").textContent = (data.ai_reports_cached ?? "—").toLocaleString();
     }
     if (usersRes.ok) {
       const users = await usersRes.json();
@@ -621,7 +622,15 @@ async function runAiAnalysis() {
       .replace(/<p>(<[hul])/g, "$1")
       .replace(/(<\/[hul][^>]*>)<\/p>/g, "$1");
 
+    const generatedDate = result.generated_at
+      ? new Date(result.generated_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    const cacheNote = result.cached
+      ? `<span class="ai-cache-badge">Cached · Generated ${generatedDate}</span>`
+      : `<span class="ai-cache-badge fresh">Generated now · Cached for 10 days</span>`;
+
     body.innerHTML = `
+      <div class="ai-analysis-header" style="margin-bottom:12px;">${cacheNote}</div>
       <div class="ai-analysis-text">${html}</div>
       <div class="ai-disclaimer">
         AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting

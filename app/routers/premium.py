@@ -1,7 +1,9 @@
 """Premium-only endpoints."""
+import time
 import requests
 from fastapi import APIRouter, Depends, HTTPException
 from app.config import settings
+from app.db import score_db
 from app.user_auth import require_premium
 
 router = APIRouter(prefix="/api/premium", tags=["premium"])
@@ -73,7 +75,14 @@ def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
     if not data:
         raise HTTPException(status_code=422, detail="data field required.")
 
-    ticker = data.get("ticker", "")
+    ticker = data.get("ticker", "").upper()
+
+    # Return cached report if still fresh (10-day TTL)
+    cached_text = score_db.get_ai_analysis(ticker)
+    if cached_text:
+        generated_at = score_db.ai_analysis_cache_info(ticker)
+        return {"text": cached_text, "cached": True, "generated_at": generated_at}
+
     name   = data.get("name", ticker)
     score  = data.get("total", "?")
     max_s  = data.get("max_total", 100)
@@ -135,4 +144,5 @@ Important:
 - Write in plain English for a retail investor, not jargon."""
 
     text = _call_claude([{"role": "user", "content": prompt}])
-    return {"text": text}
+    score_db.set_ai_analysis(ticker, text)
+    return {"text": text, "cached": False, "generated_at": time.time()}

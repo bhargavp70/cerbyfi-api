@@ -12,6 +12,7 @@ def admin_stats(user_id: str = Depends(require_admin)):
     return {
         "user_count": score_db.count_users(),
         "total_analyses": score_db.total_analyses(),
+        "ai_reports_cached": score_db.count_ai_cache(),
     }
 
 
