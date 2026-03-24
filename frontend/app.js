@@ -687,12 +687,15 @@ async function downloadAiPdf() {
   const scoreColor = data.pct >= 70 ? "#16a34a" : data.pct >= 45 ? "#d97706" : "#dc2626";
   const generatedDate = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-  // Build a self-contained, print-friendly HTML document for html2pdf
+  // Build a self-contained, print-friendly HTML document for html2pdf.
+  // - No max-width/centering: let it fill the full PDF page width.
+  // - padding built into the wrapper (margin:0 on html2pdf options).
+  // - page-break-inside:avoid on every section to prevent mid-line cuts.
   const pdfHtml = `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;max-width:700px;margin:0 auto;padding:0;">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;width:100%;padding:12mm 14mm;box-sizing:border-box;background:#ffffff;">
 
       <!-- Header -->
-      <div style="background:#0f172a;padding:28px 32px;border-radius:8px 8px 0 0;margin-bottom:0;">
+      <div style="background:#0f172a;padding:28px 32px;border-radius:8px 8px 0 0;margin-bottom:0;page-break-inside:avoid;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">
@@ -709,7 +712,7 @@ async function downloadAiPdf() {
       </div>
 
       <!-- Company header -->
-      <div style="background:#1e293b;padding:20px 32px 24px;margin-bottom:20px;border-radius:0 0 8px 8px;">
+      <div style="background:#1e293b;padding:20px 32px 24px;margin-bottom:20px;border-radius:0 0 8px 8px;page-break-inside:avoid;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
             <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${escHtml(data.name)}</div>
@@ -727,7 +730,7 @@ async function downloadAiPdf() {
       </div>
 
       <!-- Score breakdown -->
-      <div style="margin-bottom:24px;padding:0 4px;">
+      <div style="margin-bottom:24px;padding:0 4px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:10px;">Score Breakdown</div>
         <table style="width:100%;border-collapse:collapse;">
           <tbody>${categoryRows}</tbody>
@@ -762,18 +765,22 @@ async function downloadAiPdf() {
 
   // Pass the HTML string directly — html2pdf creates and manages the DOM element
   // internally, which avoids all viewport/clipping issues with html2canvas.
+  // - margin:0 because padding is built into pdfHtml wrapper
+  // - scale:1.5 avoids browser canvas-height limits on long reports
+  // - pagebreak mode splits the canvas at page boundaries so text isn't cut mid-line
   try {
     await html2pdf().set({
-      margin:      [12, 16, 12, 16],
+      margin:      0,
       filename,
-      image:       { type: "jpeg", quality: 0.98 },
+      image:       { type: "jpeg", quality: 0.95 },
       html2canvas: {
-        scale:           2,
+        scale:           1.5,
         useCORS:         true,
         backgroundColor: "#ffffff",
         logging:         false,
       },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      jsPDF:     { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
     }).from(pdfHtml).save();
   } finally {
     btn.disabled = false;
