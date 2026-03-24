@@ -48,7 +48,11 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
 
         if stop_reason == "end_turn":
             texts = [b["text"] for b in content if b.get("type") == "text"]
-            return "\n\n".join(texts).strip()
+            result = "\n\n".join(texts).strip()
+            # Strip any "thinking aloud" preamble before the first section heading
+            if "## " in result:
+                result = result[result.index("## "):]
+            return result
 
         if stop_reason == "tool_use":
             # Append assistant turn, then send tool results back

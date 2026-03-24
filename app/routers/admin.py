@@ -53,3 +53,9 @@ def update_user(target_id: str, body: dict, user_id: str = Depends(require_admin
         score_db.set_can_refresh_ai(target_id, bool(body["can_refresh_ai"]))
 
     return {"ok": True}
+
+
+@router.delete("/ai-cache/{ticker}")
+def delete_ai_cache(ticker: str, user_id: str = Depends(require_admin)):
+    score_db.delete_ai_analysis(ticker.upper())
+    return {"ok": True}

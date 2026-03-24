@@ -433,6 +433,11 @@ class ScoreDB:
             )
             self._conn.commit()
 
+    def delete_ai_analysis(self, ticker: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM ai_analysis_cache WHERE ticker=?", (ticker.upper(),))
+            self._conn.commit()
+
     def ai_analysis_cache_info(self, ticker: str) -> Optional[float]:
         """Returns generated_at timestamp if a live cache entry exists, else None."""
         with self._lock:
