@@ -580,11 +580,8 @@ async function resetAiAnalysis() {
   body.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;">Checking for report…</div>`;
 
   try {
-    const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
-      method: "POST",
-      headers: apiHeaders(true),
-      body: JSON.stringify({ data: state.lastData, check_only: true }),
-    });
+    const ticker = state.lastData.ticker;
+    const res = await fetch(`${API_BASE}/api/premium/ai-cache/${ticker}`, { headers: apiHeaders() });
     const result = await res.json();
     if (res.ok && !result.no_cache) {
       renderAiResult(result, body);

@@ -80,6 +80,16 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
     raise HTTPException(status_code=504, detail="AI analysis timed out (too many search rounds).")
 
 
+@router.get("/ai-cache/{ticker}")
+def ai_cache_get(ticker: str, user_id: str = Depends(require_premium)):
+    """Return the cached AI report for a ticker if one exists, without generating."""
+    cached_text = score_db.get_ai_analysis(ticker.upper())
+    if not cached_text:
+        return {"no_cache": True}
+    generated_at = score_db.ai_analysis_cache_info(ticker.upper())
+    return {"text": cached_text, "cached": True, "generated_at": generated_at}
+
+
 @router.post("/ai-analyze")
 def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
     if not settings.claude_api_key:
@@ -90,7 +100,6 @@ def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
         raise HTTPException(status_code=422, detail="data field required.")
 
     ticker = data.get("ticker", "").upper()
-    check_only = body.get("check_only") is True
 
     # Honour force_refresh only if the user actually has the flag enabled
     user = score_db.get_user_by_id(user_id)
@@ -103,10 +112,6 @@ def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
     if cached_text:
         generated_at = score_db.ai_analysis_cache_info(ticker)
         return {"text": cached_text, "cached": True, "generated_at": generated_at}
-
-    # check_only: caller just wants to know if cache exists — don't generate
-    if check_only:
-        return {"no_cache": True}
 
     name   = data.get("name", ticker)
     score  = data.get("total", "?")
