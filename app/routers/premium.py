@@ -80,6 +80,13 @@ def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
         raise HTTPException(status_code=422, detail="data field required.")
 
     ticker = data.get("ticker", "").upper()
+    force_refresh = bool(body.get("force_refresh", False))
+
+    # Allow users with can_refresh_ai to bust the cache
+    if force_refresh:
+        user = score_db.get_user_by_id(user_id)
+        if user and user.get("can_refresh_ai"):
+            score_db.delete_ai_analysis(ticker)
 
     # Return cached report if still fresh (10-day TTL)
     cached_text = score_db.get_ai_analysis(ticker)

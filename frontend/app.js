@@ -579,13 +579,13 @@ function resetAiAnalysis() {
   document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
 }
 
-async function runAiAnalysis() {
+async function runAiAnalysis(forceRefresh = false) {
   const body = document.getElementById("ai-analysis-body");
   if (!state.lastData) return;
 
   body.innerHTML = `
     <div style="color:var(--muted);font-size:0.88rem;line-height:1.7;">
-      <span class="ai-spinner"></span>Researching ${escHtml(state.lastData.ticker)} with Claude…
+      <span class="ai-spinner"></span>${forceRefresh ? "Refreshing" : "Researching"} ${escHtml(state.lastData.ticker)} with Claude…
       <div style="font-size:0.78rem;margin-top:6px;color:var(--muted);opacity:0.7;">
         Searching news, analyst opinions, and sentiment. This takes 20–40 seconds.
       </div>
@@ -595,7 +595,7 @@ async function runAiAnalysis() {
     const res = await fetch(`${API_BASE}/api/premium/ai-analyze`, {
       method: "POST",
       headers: apiHeaders(true),
-      body: JSON.stringify({ data: state.lastData }),
+      body: JSON.stringify({ data: state.lastData, force_refresh: forceRefresh }),
     });
 
     const result = await res.json();
@@ -647,7 +647,7 @@ async function runAiAnalysis() {
         AI research by Claude · Based on publicly available information · Not financial advice · Verify before acting
       </div>`;
     if (auth.user?.can_refresh_ai) {
-      document.getElementById("ai-analyze-btn").addEventListener("click", runAiAnalysis);
+      document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis(true));
     }
     document.getElementById("ai-pdf-btn").addEventListener("click", downloadAiPdf);
   } catch(err) {
