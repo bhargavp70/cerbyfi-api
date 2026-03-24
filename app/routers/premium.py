@@ -13,7 +13,7 @@ _ANTHROPIC_HEADERS = {
     "anthropic-version": "2023-06-01",
     "content-type": "application/json",
 }
-_WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 8}
+_WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 5}
 
 
 def _call_claude(messages: list, max_turns: int = 12) -> str:

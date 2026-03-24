@@ -607,9 +607,9 @@ async function runAiAnalysis(forceRefresh = false) {
 
     // Convert markdown to styled HTML
     const html = escHtml(result.text)
-      // ## Section headings (must come first — line-based)
-      .replace(/^## (.+)$/gm, "<h3>$1</h3>")
-      // Numbered list items
+      // All heading levels (##, ###, ####) → <h3>
+      .replace(/^#{2,4} (.+)$/gm, "<h3>$1</h3>")
+      // Numbered list items (skip lines already turned into headings)
       .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
       // Bullet points
       .replace(/^[•\-\*] (.+)$/gm, "<li>$1</li>")
@@ -617,18 +617,19 @@ async function runAiAnalysis(forceRefresh = false) {
       .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
       // Bold text
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      // Join single newlines within prose into spaces (Claude often wraps long lines)
-      // Only collapse \n that are NOT part of a blank line (\n\n) and not adjacent to tags
-      .replace(/([^>\n])\n([^<\n])/g, "$1 $2")
-      // Paragraph breaks on blank lines
-      .replace(/\n{2,}/g, "</p><p>")
+      // Protect double newlines (paragraph breaks) with a placeholder,
+      // collapse ALL remaining single newlines to spaces, then restore.
+      // This reliably fixes mid-sentence line wraps from Claude's output.
+      .replace(/\n{2,}/g, "\x00")
+      .replace(/\n/g, " ")
+      .replace(/\x00/g, "</p><p>")
       // Wrap in paragraph
-      .replace(/^(?!<[hul])/, "<p>")
-      .replace(/$(?!<\/[hul])/, "</p>")
-      // Clean up empty paragraphs
+      .replace(/^(?!<[hup])/, "<p>")
+      .replace(/$(?!<\/[hup])/, "</p>")
+      // Clean up empty paragraphs and tag wrapping artefacts
       .replace(/<p>\s*<\/p>/g, "")
-      .replace(/<p>(<[hul])/g, "$1")
-      .replace(/(<\/[hul][^>]*>)<\/p>/g, "$1");
+      .replace(/<p>(<[hup])/g, "$1")
+      .replace(/(<\/[hup][^>]*>)<\/p>/g, "$1");
 
     const generatedDate = result.generated_at
       ? new Date(result.generated_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
