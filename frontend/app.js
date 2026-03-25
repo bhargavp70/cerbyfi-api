@@ -3,6 +3,62 @@ const API_KEY  = window.CERBYFI_API_KEY || "";
 
 const state = { lastData: null };
 
+// ── Live price polling ─────────────────────────────────────
+let _priceInterval = null;
+const PRICE_POLL_MS = 60_000; // refresh every 60 seconds
+
+function isMarketOpen() {
+  // US market hours: Monday–Friday, 9:00am–5:00pm Eastern Time
+  const now  = new Date();
+  const et   = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const day  = et.getDay();   // 0=Sun, 1=Mon … 6=Sat
+  const hour = et.getHours();
+  const min  = et.getMinutes();
+  const mins = hour * 60 + min;
+  return day >= 1 && day <= 5 && mins >= 9 * 60 && mins < 17 * 60;
+}
+
+async function refreshLivePrice() {
+  if (!state.lastData || !isMarketOpen()) return;
+  const { ticker, type } = state.lastData;
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/price/${ticker}?mode=${type === "fund" ? "fund" : "stock"}`,
+      { headers: apiHeaders() }
+    );
+    if (!res.ok) return;
+    const q = await res.json();
+    applyPriceDisplay(q);
+    // Keep state in sync so cached score still shows correct price
+    state.lastData.price           = q.price;
+    state.lastData.price_change    = q.price_change;
+    state.lastData.price_change_pct = q.price_change_pct;
+  } catch { /* silent — stale price is fine */ }
+}
+
+function applyPriceDisplay(q) {
+  const priceRow = document.getElementById("price-row");
+  if (!q || q.price == null) { priceRow.style.display = "none"; return; }
+  const sign = (q.price_change ?? 0) >= 0 ? "+" : "";
+  const chg  = q.price_change != null ? `${sign}$${Math.abs(q.price_change).toFixed(2)}` : "";
+  const pct  = q.price_change_pct != null ? ` (${sign}${q.price_change_pct.toFixed(2)}%)` : "";
+  const cls  = (q.price_change ?? 0) >= 0 ? "price-up" : "price-down";
+  document.getElementById("price-value").textContent  = `$${q.price.toFixed(2)}`;
+  document.getElementById("price-change").textContent = chg + pct;
+  document.getElementById("price-change").className   = `price-change ${cls}`;
+  priceRow.style.display = "";
+}
+
+function startPricePolling() {
+  stopPricePolling();
+  if (!isMarketOpen()) return;
+  _priceInterval = setInterval(refreshLivePrice, PRICE_POLL_MS);
+}
+
+function stopPricePolling() {
+  if (_priceInterval) { clearInterval(_priceInterval); _priceInterval = null; }
+}
+
 // ── DOM refs ──────────────────────────────────────────────
 const form           = document.getElementById("search-form");
 const tickerInput    = document.getElementById("ticker-input");
@@ -395,6 +451,7 @@ document.getElementById("clear-watchlist-btn").addEventListener("click", async (
 
 // ── Analyze ───────────────────────────────────────────────
 async function analyze(ticker) {
+  stopPricePolling();
   setLoading(true);
   hideAll();
   try {
@@ -430,6 +487,10 @@ function renderResults(data) {
   } else {
     document.getElementById("cached-badge").style.display = "none";
   }
+
+  // Price display — show cached price immediately, then start live polling if market open
+  applyPriceDisplay(data);
+  startPricePolling();
 
   document.getElementById("score-big").textContent  = data.total;
   document.getElementById("score-denom").textContent = `/ ${data.max_total}`;

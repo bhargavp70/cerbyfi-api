@@ -20,6 +20,9 @@ def score_stock(ticker: str) -> dict:
         "name":       data.get("longName", ticker.upper()),
         "categories": {},
         "total":      0,
+        "price":           data.get("price"),
+        "price_change":    data.get("price_change"),
+        "price_change_pct": data.get("price_change_pct"),
     }
 
     for cat_key, category in config["categories"].items():

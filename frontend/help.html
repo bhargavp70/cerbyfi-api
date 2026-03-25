@@ -289,6 +289,7 @@
         <li><a href="#accounts">Creating an account</a></li>
         <li><a href="#portfolio">Portfolios</a></li>
         <li><a href="#optimize">Portfolio Optimizer — how it works</a></li>
+        <li><a href="#ai-analysis">AI Analysis (Premium)</a></li>
         <li><a href="#faq">Frequently asked questions</a></li>
       </ol>
     </div>
@@ -613,9 +614,55 @@
       </div>
     </section>
 
+    <!-- ── 7. AI Analysis ────────────────────────────────────── -->
+    <section class="help-section" id="ai-analysis">
+      <h3><span class="section-icon">🤖</span> AI Analysis (Premium)</h3>
+
+      <p>For Premium users, an <strong>AI Analysis</strong> section appears below the score breakdown after analyzing a ticker. It automatically loads if a cached report already exists for that ticker. If no report exists yet, a <strong>"Get AI Analysis"</strong> button lets you generate one on demand.</p>
+
+      <div class="help-subsection">
+        <h4>What the report includes</h4>
+      </div>
+      <p>Each AI Analysis report is structured into 8 sections:</p>
+      <ul class="steps">
+        <li><span class="step-num">1</span><strong>The Company &amp; Its Story</strong> — background on the business and what it does</li>
+        <li><span class="step-num">2</span><strong>What the Score Reveals</strong> — interpretation of the CerbyFi score in context</li>
+        <li><span class="step-num">3</span><strong>Recent News &amp; Developments</strong> — latest headlines and events affecting the company</li>
+        <li><span class="step-num">4</span><strong>What Analysts Are Saying</strong> — summary of analyst ratings and price targets</li>
+        <li><span class="step-num">5</span><strong>Public &amp; Retail Sentiment</strong> — how everyday investors and the public are talking about the stock</li>
+        <li><span class="step-num">6</span><strong>Opportunities &amp; Risks</strong> — key upside potential and downside risks</li>
+        <li><span class="step-num">7</span><strong>5 Questions to Guide Your Research</strong> — curated questions to help you dig deeper</li>
+        <li><span class="step-num">8</span><strong>Where to Research Further</strong> — suggested sources and next steps</li>
+      </ul>
+
+      <div class="help-subsection">
+        <h4>How it's generated</h4>
+      </div>
+      <p>Reports are generated using <strong>Claude AI</strong> with live web search — up to 5 searches are performed to pull real-time news, analyst opinions, and public sentiment at the moment of generation. Because of this, generating a new report takes <strong>30–90 seconds</strong>.</p>
+
+      <div class="help-subsection">
+        <h4>Caching</h4>
+      </div>
+      <p>Reports are cached for <strong>10 days</strong>. Once a report has been generated for a ticker, any premium user requesting that same ticker will receive the cached report instantly. A <strong>"Cached · Generated [date]"</strong> badge is displayed when a cached report is served.</p>
+
+      <div class="help-subsection">
+        <h4>PDF download</h4>
+      </div>
+      <p>A <strong>"↓ Download PDF"</strong> button is available on every report. Clicking it opens a new tab with a print-friendly version of the report. Use your browser's print dialog (<strong>Cmd+P</strong> on Mac, <strong>Ctrl+P</strong> on Windows) and select <strong>"Save as PDF"</strong> as the destination.</p>
+
+      <div class="help-subsection">
+        <h4>Refresh</h4>
+      </div>
+      <p>If an administrator has enabled the Refresh flag for your account, a <strong>"↺ Refresh"</strong> button will appear alongside the report. This lets you force-generate a new report for the ticker, bypassing the cache.</p>
+
+      <div class="callout callout-note">
+        <span class="callout-label">Note:</span> Premium access is granted by an administrator. Contact the site owner to request premium access.
+      </div>
+    </section>
+
     <hr class="divider" />
 
-    <!-- ── 7. FAQ ──────────────────────────────────────────── -->
+    <!-- ── 8. FAQ ──────────────────────────────────────────── -->
     <section class="help-section" id="faq">
       <h3><span class="section-icon">❓</span> Frequently asked questions</h3>
 
@@ -641,7 +688,7 @@
 
       <div class="faq-item">
         <div class="faq-q">What happens to my watchlist if I sign out?</div>
-        <div class="faq-a">Your server-side watchlist is preserved for when you sign back in. While signed out, the app falls back to your browser's local storage watchlist, which may be different.</div>
+        <div class="faq-a">Your watchlist is saved server-side and is available whenever you sign back in. The watchlist requires an account — it is not available while signed out.</div>
       </div>
 
       <div class="faq-item">

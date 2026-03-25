@@ -92,6 +92,7 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
         try:
             profile = _fh_get("/stock/profile2", symbol=ticker)
             metrics = _fh_get("/stock/metric",   symbol=ticker, metric="all")
+            quote   = _fh_get("/quote",           symbol=ticker)
 
             if not profile or not profile.get("name"):
                 raise ValueError(f"No data found for '{ticker}'. Check the ticker symbol.")
@@ -115,6 +116,19 @@ def fetch_stock_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
         "symbol":   ticker.upper(),
         "longName": profile.get("name", ticker.upper()),
     }
+
+    # Current price and daily change from Finnhub quote
+    # c=current, d=change from prev close, dp=pct change from prev close
+    if isinstance(quote, dict):
+        q_price = quote.get("c")
+        q_change = quote.get("d")
+        q_pct = quote.get("dp")
+        if q_price and float(q_price) > 0:
+            info["price"] = round(float(q_price), 2)
+        if q_change is not None:
+            info["price_change"] = round(float(q_change), 2)
+        if q_pct is not None:
+            info["price_change_pct"] = round(float(q_pct), 2)
 
     # Revenue growth YoY
     rev = pct(m.get("revenueGrowthTTMYoy"))
@@ -257,6 +271,20 @@ def fetch_fund_data(ticker: str, retries: int = 3, delay: float = 2.0) -> dict:
         "symbol":   ticker.upper(),
         "longName": p.get("companyName", ticker.upper()),
     }
+
+    # Current price and daily change from FMP profile fields
+    try:
+        fmp_price = p.get("price")
+        fmp_change = p.get("changes")
+        fmp_change_pct = p.get("changesPercentage")
+        if fmp_price and float(fmp_price) > 0:
+            result["price"] = round(float(fmp_price), 2)
+        if fmp_change is not None:
+            result["price_change"] = round(float(fmp_change), 2)
+        if fmp_change_pct is not None:
+            result["price_change_pct"] = round(float(fmp_change_pct), 2)
+    except (TypeError, ValueError):
+        pass
 
     # AUM proxy from market cap
     mc = p.get("marketCap")

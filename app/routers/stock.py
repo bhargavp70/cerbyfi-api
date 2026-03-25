@@ -44,6 +44,9 @@ def _build_result(raw: dict, asset_type: str, cached: bool, fetched_at: str) -> 
         categories=categories,
         cached=cached,
         fetched_at=fetched_at,
+        price=raw.get("price"),
+        price_change=raw.get("price_change"),
+        price_change_pct=raw.get("price_change_pct"),
     )
 
 

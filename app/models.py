@@ -29,6 +29,9 @@ class ScoreResult(BaseModel):
     categories: Dict[str, CategoryResult]
     cached: bool
     fetched_at: Optional[str] = None
+    price: Optional[float] = None
+    price_change: Optional[float] = None
+    price_change_pct: Optional[float] = None
 
 
 class ErrorResponse(BaseModel):

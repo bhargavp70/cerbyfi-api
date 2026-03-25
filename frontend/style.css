@@ -490,6 +490,25 @@ main { flex: 1; max-width: 1160px; margin: 0 auto; width: 100%; padding: 32px 20
   gap: 16px;
   flex-wrap: wrap;
 }
+/* Price display */
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.price-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.price-change {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.price-up   { color: var(--green); }
+.price-down { color: var(--red); }
+
 .score-big {
   font-size: 2.4rem;
   font-weight: 800;
