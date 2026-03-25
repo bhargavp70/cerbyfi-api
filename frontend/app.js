@@ -19,7 +19,7 @@ function isMarketOpen() {
 }
 
 async function refreshLivePrice() {
-  if (!state.lastData || !isMarketOpen()) return;
+  if (!state.lastData) return;
   const { ticker, type } = state.lastData;
   try {
     const res = await fetch(
@@ -52,6 +52,7 @@ function applyPriceDisplay(q) {
 function startPricePolling() {
   stopPricePolling();
   if (!isMarketOpen()) return;
+  refreshLivePrice();  // fetch immediately, don't wait for first interval
   _priceInterval = setInterval(refreshLivePrice, PRICE_POLL_MS);
 }
 
@@ -488,9 +489,11 @@ function renderResults(data) {
     document.getElementById("cached-badge").style.display = "none";
   }
 
-  // Price display — show cached price immediately, then start live polling if market open
+  // Price display — show cached price immediately; fetch live price regardless
   applyPriceDisplay(data);
   startPricePolling();
+  // If price missing from cached score (old cache entry), fetch it now even outside market hours
+  if (data.price == null) refreshLivePrice();
 
   document.getElementById("score-big").textContent  = data.total;
   document.getElementById("score-denom").textContent = `/ ${data.max_total}`;
