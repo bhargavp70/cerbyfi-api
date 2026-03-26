@@ -1047,13 +1047,31 @@ footer {
   }
 }
 
-/* Small — single column */
+/* Mobile — single column, all panels stacked */
 @media (max-width: 640px) {
   .page-body {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    overflow: visible;
   }
   .left-nav {
-    display: none;
+    display: flex;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    order: 2;
+  }
+  .main-area {
+    padding: 14px;
+    order: 1;
+    overflow: visible;
+  }
+  .right-panel {
+    display: block;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    overflow: visible;
+    order: 3;
   }
   .topbar {
     padding: 0 12px;
@@ -1064,9 +1082,6 @@ footer {
   }
   .topbar-search-form {
     max-width: none;
-  }
-  .main-area {
-    padding: 14px;
   }
   .hero-card {
     flex-direction: column;
