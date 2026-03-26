@@ -497,6 +497,16 @@ function renderResults(data) {
 
   document.getElementById("score-big").textContent  = data.total;
   document.getElementById("score-denom").textContent = `/ ${data.max_total}`;
+
+  // Update SVG score gauge
+  const gaugeEl = document.getElementById("score-gauge-fill");
+  if (gaugeEl) {
+    const circumference = 339.3;
+    const offset = circumference - (data.pct / 100) * circumference;
+    gaugeEl.style.strokeDashoffset = offset;
+    const gaugeColor = data.pct >= 70 ? "#00e599" : data.pct >= 45 ? "#ffb830" : "#ff4d6a";
+    gaugeEl.setAttribute("stroke", gaugeColor);
+  }
   document.getElementById("stars-row").textContent   = starsString(data.stars);
   document.getElementById("rating-text").textContent  = data.rating_label;
 
@@ -527,9 +537,19 @@ function renderResults(data) {
 }
 
 function buildCategoryCard(cat) {
+  const CAT_ICONS = {
+    business_quality: "🏢", financial_strength: "💪", growth_potential: "📈",
+    valuation: "💰", management: "🎯", fund_stability: "🏦",
+    risk_profile: "🛡️", returns: "📈", income: "💸",
+  };
+  // Derive key from label (lowercase, replace spaces with _)
+  const catKey = cat.label.toLowerCase().replace(/[^a-z]/g, "_").replace(/_+/g, "_");
+  const icon = CAT_ICONS[catKey] || "📊";
+
   const card = document.createElement("div");
   card.className = "category-card";
   card.innerHTML = `
+    <div class="cat-icon">${icon}</div>
     <div class="category-header">
       <span class="category-label">${cat.label}</span>
       <span class="category-score">${cat.score} / ${cat.max}</span>
@@ -614,7 +634,7 @@ function renderTopList(listId, items) {
 function starsString(n) { return "★".repeat(n) + "☆".repeat(5 - n); }
 function barColor(pct)   { return pct >= 70 ? "green" : pct >= 45 ? "amber" : "red"; }
 function scoreColor(pct) {
-  return pct >= 70 ? "var(--green)" : pct >= 45 ? "var(--amber)" : "var(--red)";
+  return pct >= 70 ? "var(--green)" : pct >= 45 ? "var(--gold)" : "var(--red)";
 }
 function escHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")

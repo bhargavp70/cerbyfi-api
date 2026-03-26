@@ -8,23 +8,6 @@
 </head>
 <body>
 
-<header>
-  <div class="header-inner">
-    <div class="header-brand">
-      <img src="logo.png" alt="CerbyFi logo" class="header-logo" />
-      <div>
-        <h1>Cerby<span>Fi</span></h1>
-        <p>Stock &amp; fund scoring — 100-point framework &nbsp;·&nbsp; <span id="analysis-counter" class="counter-text"></span></p>
-      </div>
-    </div>
-    <div class="header-auth" id="header-auth">
-      <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
-      <button class="auth-link" id="btn-open-login">Sign in</button>
-      <button class="auth-link primary" id="btn-open-register">Register</button>
-    </div>
-  </div>
-</header>
-
 <!-- Admin modal -->
 <div id="admin-modal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width:520px;max-height:80vh;display:flex;flex-direction:column;">
@@ -93,178 +76,187 @@
   </div>
 </div>
 
-<main>
-  <div class="layout">
+<!-- NEW: Topbar -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="logo.png" alt="CerbyFi" class="topbar-logo" />
+    <span class="topbar-name">Cerby<span>Fi</span></span>
+  </div>
+  <form id="search-form" class="topbar-search-form">
+    <div class="topbar-search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);flex-shrink:0;">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input id="ticker-input" type="text" placeholder="Search ticker — AAPL, NVDA, SPY…"
+        autocomplete="off" autocapitalize="characters" spellcheck="false" />
+      <button id="analyze-btn" type="submit">Analyze</button>
+    </div>
+  </form>
+  <div class="topbar-right">
+    <span id="analysis-counter" class="counter-text"></span>
+    <div id="header-auth">
+      <a href="/help.html" class="auth-link" style="text-decoration:none;">Help</a>
+      <button class="auth-link" id="btn-open-login">Sign in</button>
+      <button class="auth-link primary" id="btn-open-register">Register</button>
+    </div>
+  </div>
+</header>
 
-    <!-- Left sidebar: Watchlist + Most Searched -->
-    <aside class="layout-sidebar">
+<!-- NEW: 3-panel body -->
+<div class="page-body">
 
-      <!-- Watchlist -->
-      <div id="watchlist-section" style="display:none;">
-        <div class="watchlist-header">
-          <span class="watchlist-title">Watchlist</span>
-          <button id="clear-watchlist-btn" class="wl-clear-btn">Clear all</button>
-        </div>
-        <div id="watchlist-grid"></div>
+  <!-- Left nav (220px) -->
+  <nav class="left-nav">
+    <div class="nav-section">
+      <div class="nav-label">Menu</div>
+      <a href="/help.html" class="nav-item"><span class="nav-icon">❓</span>Help</a>
+    </div>
+
+    <!-- Watchlist in left nav -->
+    <div id="watchlist-section" style="display:none;">
+      <div class="nav-section-header">
+        <span class="nav-label">Watchlist</span>
+        <button id="clear-watchlist-btn" class="wl-clear-btn">Clear all</button>
+      </div>
+      <div id="watchlist-grid"></div>
+    </div>
+
+    <!-- Portfolios in left nav -->
+    <div id="portfolio-section" style="display:none;">
+      <div class="nav-section-header">
+        <span class="nav-label">Portfolios</span>
+        <button id="new-portfolio-btn" class="wl-clear-btn accent-btn">+ New</button>
       </div>
 
-      <!-- Portfolios (logged-in only) -->
-      <div id="portfolio-section" style="display:none;">
-        <div class="watchlist-header">
-          <span class="watchlist-title">Portfolios</span>
-          <button id="new-portfolio-btn" class="wl-clear-btn accent-btn">+ New</button>
+      <div id="portfolio-list"></div>
+
+      <div id="portfolio-detail" style="display:none;">
+        <div class="nav-section-header" style="margin-bottom:8px;">
+          <button id="portfolio-back-btn" class="wl-clear-btn">← Back</button>
+          <span id="portfolio-detail-name" class="nav-label" style="flex:1;text-align:right;"></span>
         </div>
 
-        <!-- List of portfolios -->
-        <div id="portfolio-list"></div>
+        <div class="portfolio-score-row">
+          <span class="portfolio-score-label">Portfolio Score</span>
+          <span id="portfolio-agg-score" class="portfolio-score-value">—</span>
+        </div>
+        <div class="wl-bar-track" style="margin-bottom:12px;">
+          <div id="portfolio-agg-bar" class="wl-bar-fill" style="width:0%"></div>
+        </div>
 
-        <!-- Portfolio detail (replaces list when open) -->
-        <div id="portfolio-detail" style="display:none;">
-          <div class="watchlist-header" style="margin-bottom:8px;">
-            <button id="portfolio-back-btn" class="wl-clear-btn">← Back</button>
-            <span id="portfolio-detail-name" class="watchlist-title" style="flex:1;text-align:right;"></span>
-          </div>
+        <div id="portfolio-holdings-list"></div>
 
-          <div class="portfolio-score-row">
-            <span class="portfolio-score-label">Portfolio Score</span>
-            <span id="portfolio-agg-score" class="portfolio-score-value">—</span>
-          </div>
-          <div class="wl-bar-track" style="margin-bottom:12px;">
-            <div id="portfolio-agg-bar" class="wl-bar-fill" style="width:0%"></div>
-          </div>
+        <button id="portfolio-add-current-btn" class="auth-link" style="display:none;width:100%;margin:8px 0;font-size:0.8rem;"></button>
 
-          <div id="portfolio-holdings-list"></div>
-
-          <button id="portfolio-add-current-btn" class="auth-link" style="display:none;width:100%;margin:8px 0;font-size:0.8rem;"></button>
-
-          <!-- Optimize panel -->
-          <div id="optimize-panel" style="display:none;">
-            <div class="optimize-score-compare">
-              <div class="opt-score-box">
-                <div class="opt-score-label">Current</div>
-                <div id="opt-current-score" class="opt-score-num"></div>
-              </div>
-              <div class="opt-arrow">→</div>
-              <div class="opt-score-box">
-                <div class="opt-score-label">Optimized</div>
-                <div id="opt-new-score" class="opt-score-num green"></div>
-              </div>
+        <div id="optimize-panel" style="display:none;">
+          <div class="optimize-score-compare">
+            <div class="opt-score-box">
+              <div class="opt-score-label">Current</div>
+              <div id="opt-current-score" class="opt-score-num"></div>
             </div>
-            <div id="optimize-rows"></div>
-            <button id="apply-optimize-btn" class="auth-submit" style="width:100%;padding:8px;margin-top:8px;">Apply Allocation</button>
-          </div>
-
-          <div style="display:flex;gap:6px;margin-top:10px;">
-            <button id="optimize-btn" class="wl-toggle-btn" style="flex:1;">Optimize</button>
-            <button id="delete-portfolio-btn" class="wl-toggle-btn" style="flex:1;color:var(--red);">Delete</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Most Searched -->
-      <div id="top-section" style="display:none;">
-        <div class="watchlist-header">
-          <span class="watchlist-title">Most Searched</span>
-        </div>
-        <div class="top-columns">
-          <div>
-            <div class="top-col-label">Stocks</div>
-            <ol id="top-stocks-list" class="top-list"></ol>
-          </div>
-          <div>
-            <div class="top-col-label">ETFs / Funds</div>
-            <ol id="top-funds-list" class="top-list"></ol>
-          </div>
-        </div>
-      </div>
-
-    </aside>
-
-    <!-- Right main: Search + Error + Results -->
-    <div class="layout-main">
-
-      <!-- Search card -->
-      <div class="search-card">
-        <form id="search-form">
-          <div class="input-row">
-            <input
-              id="ticker-input"
-              type="text"
-              placeholder="e.g. AAPL, NVDA, TSLA, SPY, QQQ"
-              autocomplete="off"
-              autocapitalize="characters"
-              spellcheck="false"
-            />
-            <button id="analyze-btn" type="submit">Analyze</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Error -->
-      <div id="error-section">
-        <strong>Error</strong> — <span id="error-msg"></span>
-      </div>
-
-      <!-- Results -->
-      <div id="results-section">
-
-        <div class="result-header">
-          <div class="result-meta">
-            <div>
-              <span class="result-name" id="result-name"></span>
-              <span class="result-ticker" id="result-ticker"></span>
-              <span class="result-ticker" id="result-type-badge"></span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <span class="cached-badge" id="cached-badge" style="display:none"></span>
-              <button id="watchlist-btn" class="wl-toggle-btn"></button>
+            <div class="opt-arrow">→</div>
+            <div class="opt-score-box">
+              <div class="opt-score-label">Optimized</div>
+              <div id="opt-new-score" class="opt-score-num green"></div>
             </div>
           </div>
+          <div id="optimize-rows"></div>
+          <button id="apply-optimize-btn" class="auth-submit" style="width:100%;padding:8px;margin-top:8px;">Apply Allocation</button>
+        </div>
 
-          <div id="price-row" style="display:none;" class="price-row">
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button id="optimize-btn" class="wl-toggle-btn" style="flex:1;">Optimize</button>
+          <button id="delete-portfolio-btn" class="wl-toggle-btn" style="flex:1;color:var(--red);">Delete</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main area -->
+  <main class="main-area">
+    <!-- Error -->
+    <div id="error-section">
+      <strong>Error</strong> — <span id="error-msg"></span>
+    </div>
+
+    <!-- Results -->
+    <div id="results-section">
+
+      <!-- Hero card -->
+      <div class="hero-card">
+        <div class="hero-left">
+          <div class="hero-tags">
+            <span id="result-ticker" class="tag tag-ticker"></span>
+            <span id="result-type-badge" class="tag tag-type"></span>
+            <span id="cached-badge" class="cached-badge" style="display:none;"></span>
+          </div>
+          <div id="result-name" class="hero-name"></div>
+          <div id="price-row" class="hero-price-row" style="display:none;">
             <span id="price-value" class="price-value"></span>
             <span id="price-change" class="price-change"></span>
           </div>
-
-          <div class="score-row">
-            <div>
-              <span class="score-big" id="score-big"></span>
-              <span class="score-denom" id="score-denom"></span>
-            </div>
-            <div>
-              <div class="stars" id="stars-row"></div>
-              <div class="rating-text" id="rating-text"></div>
-            </div>
-          </div>
-
-          <div class="total-bar-wrap">
-            <div class="bar-track">
-              <div id="total-bar-fill" class="bar-fill" style="width:0%"></div>
-            </div>
+          <div class="hero-actions">
+            <button id="watchlist-btn" class="wl-toggle-btn">+ Watchlist</button>
           </div>
         </div>
-
-        <div class="categories-grid" id="categories-grid"></div>
-
-        <!-- AI Analysis (premium users only) -->
-        <div id="ai-analysis-section" style="display:none;">
-          <div class="ai-analysis-card">
-            <div class="ai-analysis-header">
-              <span class="ai-analysis-title">AI Analysis</span>
-              <span class="premium-badge">✦ Premium</span>
-            </div>
-            <div id="ai-analysis-body">
-              <button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>
+        <div class="hero-right">
+          <div class="score-gauge-wrap">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <circle cx="65" cy="65" r="54" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="11"/>
+              <circle id="score-gauge-fill" cx="65" cy="65" r="54" fill="none"
+                stroke="#00e599" stroke-width="11"
+                stroke-dasharray="339.3" stroke-dashoffset="339.3"
+                stroke-linecap="round"
+                style="transform:rotate(-90deg);transform-origin:65px 65px;transition:stroke-dashoffset 0.7s ease,stroke 0.4s ease;"/>
+            </svg>
+            <div class="score-gauge-text">
+              <span id="score-big" class="score-num"></span>
+              <span id="score-denom" class="score-denom"></span>
             </div>
           </div>
+          <div id="stars-row" class="stars"></div>
+          <div id="rating-text" class="rating-text"></div>
         </div>
+      </div>
 
-      </div><!-- /results -->
+      <!-- Total bar -->
+      <div class="total-bar-wrap">
+        <div class="bar-track">
+          <div id="total-bar-fill" class="bar-fill" style="width:0%"></div>
+        </div>
+      </div>
 
-    </div><!-- /layout-main -->
+      <!-- Categories -->
+      <div class="categories-grid" id="categories-grid"></div>
 
-  </div><!-- /layout -->
-</main>
+      <!-- AI Analysis -->
+      <div id="ai-analysis-section" style="display:none;">
+        <div class="ai-analysis-card">
+          <div class="ai-analysis-header">
+            <span class="ai-analysis-title">AI Analysis</span>
+            <span class="premium-badge">✦ Premium</span>
+          </div>
+          <div id="ai-analysis-body">
+            <button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+  </main>
+
+  <!-- Right panel -->
+  <aside class="right-panel">
+    <div id="top-section" style="display:none;">
+      <div class="panel-title">Most Searched</div>
+      <div class="top-col-label">Stocks</div>
+      <ol id="top-stocks-list" class="top-list"></ol>
+      <div class="top-col-label" style="margin-top:16px;">ETFs / Funds</div>
+      <ol id="top-funds-list" class="top-list"></ol>
+    </div>
+  </aside>
+
+</div><!-- /page-body -->
 
 <footer>
   Data: Finnhub &nbsp;·&nbsp; Financial Modeling Prep &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; <a href="/help.html" style="color:var(--muted);">Help</a>
