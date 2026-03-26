@@ -530,7 +530,11 @@ function renderResults(data) {
   for (const cat of Object.values(data.categories)) {
     grid.appendChild(buildCategoryCard(cat));
   }
+  homeSection.style.display = "none";
   resultsSection.style.display = "block";
+  if (_lastIndices.length) {
+    document.getElementById("right-indices").style.display = "";
+  }
 
   // AI Analysis section — visible to premium users only
   const aiSection = document.getElementById("ai-analysis-section");
