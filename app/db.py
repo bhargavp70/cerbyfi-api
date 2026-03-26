@@ -81,6 +81,16 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
     added_at     REAL NOT NULL,
     PRIMARY KEY (portfolio_id, ticker)
 );
+
+CREATE TABLE IF NOT EXISTS resources (
+    id          TEXT PRIMARY KEY,
+    title       TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    description TEXT,
+    kind        TEXT NOT NULL DEFAULT 'article',
+    position    INTEGER NOT NULL DEFAULT 0,
+    created_at  REAL NOT NULL
+);
 """
 
 
@@ -450,6 +460,36 @@ class ScoreDB:
         if time.time() - row["generated_at"] > self._AI_CACHE_TTL:
             return None
         return row["generated_at"]
+
+
+    # ── Resources ─────────────────────────────────────────────
+
+    def list_resources(self) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM resources ORDER BY position ASC, created_at ASC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def upsert_resource(self, id: str, title: str, url: str,
+                        description: str, kind: str, position: int) -> None:
+        with self._lock:
+            self._conn.execute(
+                """INSERT INTO resources (id, title, url, description, kind, position, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET
+                     title=excluded.title, url=excluded.url,
+                     description=excluded.description, kind=excluded.kind,
+                     position=excluded.position""",
+                (id, title, url, description, kind, position, time.time()),
+            )
+            self._conn.commit()
+
+    def delete_resource(self, id: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM resources WHERE id=?", (id,))
+            self._conn.commit()
+        return cur.rowcount > 0
 
 
 score_db = ScoreDB(db_path=settings.db_path, ttl_seconds=settings.cache_ttl_seconds)

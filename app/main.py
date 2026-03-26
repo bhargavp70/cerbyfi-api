@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import stock, fund, analyze, user, watchlist_user, portfolio, admin, premium, prices
+from app.routers import stock, fund, analyze, user, watchlist_user, portfolio, admin, premium, prices, market
 from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem, StatsResponse
 from app.db import score_db
 from app.auth import require_api_key
@@ -52,6 +52,7 @@ app.include_router(portfolio.router)      # JWT-protected portfolio management
 app.include_router(admin.router)          # Admin-only endpoints
 app.include_router(premium.router)        # Premium-only endpoints
 app.include_router(prices.router,         dependencies=[Depends(require_api_key)])
+app.include_router(market.router)         # public — no API key needed
 
 
 @app.get("/config.js", include_in_schema=False)

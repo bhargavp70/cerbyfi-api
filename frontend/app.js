@@ -130,6 +130,7 @@ function signOut() {
   auth.user  = null;
   localStorage.removeItem(TOKEN_KEY);
   renderAuthState();
+  updateNavGuestCta();
   cachedWatchlist = [];
   renderWatchlist();
   if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
@@ -190,6 +191,8 @@ document.getElementById("login-form").addEventListener("submit", async e => {
     localStorage.setItem(TOKEN_KEY, data.token);
     closeModal();
     renderAuthState();
+    updateNavGuestCta();
+    loadHome();
     await syncWatchlist();
     if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
   } catch { errEl.textContent = "Could not reach server."; }
@@ -219,6 +222,8 @@ document.getElementById("register-form").addEventListener("submit", async e => {
     localStorage.setItem(TOKEN_KEY, data.token);
     closeModal();
     renderAuthState();
+    updateNavGuestCta();
+    loadHome();
     await syncWatchlist();
     if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
   } catch { errEl.textContent = "Could not reach server."; }
@@ -645,8 +650,9 @@ function showError(ticker, msg) {
   errorSection.style.display = "block";
 }
 function hideAll() {
-  errorSection.style.display  = "none";
+  errorSection.style.display   = "none";
   resultsSection.style.display = "none";
+  homeSection.style.display    = "none";
 }
 function setLoading(bool) {
   analyzeBtn.disabled = bool;
@@ -937,10 +943,204 @@ function downloadAiPdf() {
   setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
 
+// ── Home section ──────────────────────────────────────────
+const homeSection = document.getElementById("home-section");
+
+function showHome() {
+  homeSection.style.display = "";
+  resultsSection.style.display = "none";
+  errorSection.style.display   = "none";
+}
+
+function hideHome() {
+  homeSection.style.display = "none";
+}
+
+function renderSparkline(canvas, values) {
+  if (!values || values.length < 2) return;
+  const w = canvas.clientWidth || 200, h = 40;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const color = values[values.length - 1] >= values[0] ? "#00e599" : "#ff4d6a";
+  canvas.innerHTML = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+    <line x1="0" y1="${h - 2}" x2="${w}" y2="${h - 2}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="3,3"/>
+  </svg>`;
+}
+
+async function loadHome() {
+  try {
+    const res = await fetch(`${API_BASE}/api/market`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderIndices(data.indices || []);
+    renderNews(data.news || []);
+    renderResources(data.resources || []);
+  } catch { /* silent */ }
+}
+
+function renderIndices(indices) {
+  const grid = document.getElementById("indices-grid");
+  grid.innerHTML = "";
+  indices.forEach(idx => {
+    const up = idx.change_pct >= 0;
+    const changeClass = idx.change_pct == null ? "flat" : up ? "up" : "dn";
+    const changeText = idx.change_pct == null ? "—"
+      : `${up ? "+" : ""}${idx.change_pct.toFixed(2)}%`;
+    const priceText = idx.price != null
+      ? idx.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : "—";
+
+    const card = document.createElement("div");
+    card.className = "index-card";
+    card.innerHTML = `
+      <div class="index-name">${escHtml(idx.name)}</div>
+      <div class="index-desc">${escHtml(idx.desc)}</div>
+      <div class="index-sparkline" data-spark></div>
+      <div class="index-bottom">
+        <span class="index-price">${priceText}</span>
+        <span class="index-change ${changeClass}">${changeText}</span>
+      </div>`;
+    grid.appendChild(card);
+
+    // Draw sparkline after appending (needs layout width)
+    requestAnimationFrame(() => {
+      const spark = card.querySelector("[data-spark]");
+      renderSparkline(spark, idx.sparkline);
+    });
+  });
+}
+
+function renderNews(items) {
+  const list = document.getElementById("news-list");
+  list.innerHTML = "";
+  if (!items.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;">No news available.</div>`;
+    return;
+  }
+  items.forEach(item => {
+    const a = document.createElement("a");
+    a.className = "news-item";
+    a.href = item.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    const ts = item.datetime ? new Date(item.datetime * 1000).toLocaleDateString() : "";
+    a.innerHTML = `
+      ${item.image ? `<img class="news-thumb" src="${escHtml(item.image)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ""}
+      <div class="news-body">
+        <div class="news-headline">${escHtml(item.headline)}</div>
+        <div class="news-meta">${escHtml(item.source || "")}${ts ? " · " + ts : ""}</div>
+      </div>`;
+    list.appendChild(a);
+  });
+}
+
+const KIND_ICONS = { article: "📰", video: "▶️", podcast: "🎙️", tool: "🛠️", book: "📚" };
+
+function renderResources(items) {
+  const block = document.getElementById("resources-block");
+  const list  = document.getElementById("resources-list");
+  const editBtn = document.getElementById("resources-edit-btn");
+
+  // Show edit button for admins
+  if (auth.user && auth.user.is_admin) {
+    editBtn.style.display = "";
+  }
+
+  if (!items.length && !(auth.user && auth.user.is_admin)) {
+    block.style.display = "none";
+    return;
+  }
+  block.style.display = "";
+  list.innerHTML = "";
+
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "resource-item-wrap";
+    const icon = KIND_ICONS[item.kind] || "🔗";
+    div.innerHTML = `
+      <a class="resource-item" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="resource-kind-icon">${icon}</span>
+        <div class="resource-body">
+          <div class="resource-title">${escHtml(item.title)}</div>
+          ${item.description ? `<div class="resource-desc">${escHtml(item.description)}</div>` : ""}
+        </div>
+      </a>
+      ${auth.user && auth.user.is_admin ? `
+        <div class="resource-admin-row">
+          <button class="wl-clear-btn" onclick="editResource('${item.id}')">Edit</button>
+          <button class="wl-clear-btn" style="color:var(--red);" onclick="deleteResource('${item.id}')">Delete</button>
+        </div>` : ""}`;
+    list.appendChild(div);
+  });
+
+  if (auth.user && auth.user.is_admin && !items.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;">No resources yet. Click "+ Add" to add one.</div>`;
+  }
+}
+
+document.getElementById("resources-edit-btn").addEventListener("click", () => addResource());
+
+async function addResource() {
+  const title = prompt("Title:");
+  if (!title) return;
+  const url = prompt("URL:");
+  if (!url) return;
+  const description = prompt("Short description (optional):") || "";
+  const kind = prompt("Kind: article / video / podcast / tool / book", "article") || "article";
+  const res = await fetch(`${API_BASE}/api/market/resources`, {
+    method: "POST",
+    headers: apiHeaders(true),
+    body: JSON.stringify({ title, url, description, kind, position: 0 }),
+  });
+  if (res.ok) loadHome();
+}
+
+async function editResource(id) {
+  const existing = (await (await fetch(`${API_BASE}/api/market/resources`, { headers: apiHeaders() })).json())
+    .find(r => r.id === id);
+  if (!existing) return;
+  const title = prompt("Title:", existing.title);
+  if (title == null) return;
+  const url = prompt("URL:", existing.url);
+  if (url == null) return;
+  const description = prompt("Description:", existing.description || "") || "";
+  const kind = prompt("Kind:", existing.kind || "article") || "article";
+  await fetch(`${API_BASE}/api/market/resources/${id}`, {
+    method: "PUT",
+    headers: apiHeaders(true),
+    body: JSON.stringify({ title, url, description, kind, position: existing.position }),
+  });
+  loadHome();
+}
+
+async function deleteResource(id) {
+  if (!confirm("Delete this resource?")) return;
+  await fetch(`${API_BASE}/api/market/resources/${id}`, { method: "DELETE", headers: apiHeaders() });
+  loadHome();
+}
+
+// Show/hide guest CTA in left nav
+function updateNavGuestCta() {
+  const cta = document.getElementById("nav-guest-cta");
+  if (!cta) return;
+  cta.style.display = auth.user ? "none" : "block";
+}
+
+document.getElementById("nav-signin-btn").addEventListener("click", () => openModal("login"));
+document.getElementById("nav-register-btn").addEventListener("click", () => openModal("register"));
+
 // ── Init ──────────────────────────────────────────────────
-initAuth();
+initAuth().then(() => { updateNavGuestCta(); renderResources([]); });
 loadTopTickers();
 loadStats();
+loadHome();
+showHome();
 
 // ── Portfolios ────────────────────────────────────────────
 const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false };

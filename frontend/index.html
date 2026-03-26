@@ -115,6 +115,16 @@
       <a href="/help.html" class="nav-item"><span class="nav-icon">❓</span>Help</a>
     </div>
 
+    <!-- Shown when logged out -->
+    <div id="nav-guest-cta" style="display:none;">
+      <div class="nav-guest-card">
+        <div class="nav-guest-title">Save your research</div>
+        <div class="nav-guest-desc">Sign in to access your watchlist and portfolios.</div>
+        <button class="auth-submit" id="nav-signin-btn" style="width:100%;padding:8px;margin-top:10px;font-size:0.82rem;">Sign in</button>
+        <button class="auth-link" id="nav-register-btn" style="width:100%;margin-top:6px;font-size:0.82rem;">Create account</button>
+      </div>
+    </div>
+
     <!-- Watchlist in left nav -->
     <div id="watchlist-section" style="display:none;">
       <div class="nav-section-header">
@@ -177,6 +187,32 @@
 
   <!-- Main area -->
   <main class="main-area">
+    <!-- Home / welcome section -->
+    <div id="home-section">
+
+      <!-- Market indices -->
+      <div class="home-block">
+        <div class="home-block-title">Market Overview</div>
+        <div id="indices-grid" class="indices-grid"></div>
+      </div>
+
+      <!-- Today's news -->
+      <div class="home-block">
+        <div class="home-block-title">Today's News</div>
+        <div id="news-list" class="news-list"></div>
+      </div>
+
+      <!-- Recommended resources -->
+      <div class="home-block" id="resources-block" style="display:none;">
+        <div class="home-block-title-row">
+          <span class="home-block-title">Recommended Resources</span>
+          <button id="resources-edit-btn" class="wl-clear-btn accent-btn" style="display:none;">+ Add</button>
+        </div>
+        <div id="resources-list" class="resources-list"></div>
+      </div>
+
+    </div>
+
     <!-- Error -->
     <div id="error-section">
       <strong>Error</strong> — <span id="error-msg"></span>
