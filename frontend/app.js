@@ -305,12 +305,14 @@ function renderAdminUserList(users) {
       : "";
 
     row.innerHTML = `
-      <div class="admin-user-info">
-        <div class="admin-user-name">${escHtml(u.name)}</div>
-        <div class="admin-user-email">${escHtml(u.email)}</div>
+      <div class="admin-user-top">
+        <div class="admin-user-info">
+          <div class="admin-user-name">${escHtml(u.name)}</div>
+          <div class="admin-user-email">${escHtml(u.email)}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">${adminBadge}${premiumBadge}${refreshBadge}</div>
       </div>
-      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBadge}${premiumBadge}${refreshBadge}</div>
-      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBtn}${premiumBtn}${refreshBtn}${ejectBtn}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${adminBtn}${premiumBtn}${refreshBtn}${ejectBtn}</div>
     `;
 
     row.querySelectorAll(".admin-toggle-btn:not(.eject)").forEach(btn => {
