@@ -229,6 +229,9 @@ document.getElementById("register-form").addEventListener("submit", async e => {
     closeModal();
     renderAuthState();
     updateNavGuestCta();
+    if (data.email_sent) {
+      setTimeout(() => alert(`Welcome to CerbyFi, ${data.user.name}!\n\nA verification email has been sent to ${data.user.email}. Please check your inbox and click the link to verify your account.`), 200);
+    }
     loadHome();
     await syncWatchlist();
     if (state.lastData) updateWatchlistBtn(state.lastData.ticker);
@@ -297,16 +300,20 @@ function renderAdminUserList(users) {
       ? `<button class="admin-toggle-btn demote"  data-id="${u.id}" data-field="can_refresh_ai" data-val="false">Disable refresh</button>`
       : `<button class="admin-toggle-btn promote" data-id="${u.id}" data-field="can_refresh_ai" data-val="true">Enable refresh</button>`;
 
+    const ejectBtn = (!u.is_protected && !isSelf)
+      ? `<button class="admin-toggle-btn eject" data-id="${u.id}" data-name="${escHtml(u.name)}">Eject</button>`
+      : "";
+
     row.innerHTML = `
       <div class="admin-user-info">
         <div class="admin-user-name">${escHtml(u.name)}</div>
         <div class="admin-user-email">${escHtml(u.email)}</div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBadge}${premiumBadge}${refreshBadge}</div>
-      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBtn}${premiumBtn}${refreshBtn}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;">${adminBtn}${premiumBtn}${refreshBtn}${ejectBtn}</div>
     `;
 
-    row.querySelectorAll(".admin-toggle-btn").forEach(btn => {
+    row.querySelectorAll(".admin-toggle-btn:not(.eject)").forEach(btn => {
       btn.addEventListener("click", async () => {
         btn.disabled = true;
         const field = btn.dataset.field;
@@ -322,6 +329,22 @@ function renderAdminUserList(users) {
         } catch { btn.disabled = false; }
       });
     });
+
+    const ejectEl = row.querySelector(".eject");
+    if (ejectEl) {
+      ejectEl.addEventListener("click", async () => {
+        if (!confirm(`Eject "${u.name}" (${u.email})?\n\nThis will permanently delete their account, watchlist, and portfolios.`)) return;
+        ejectEl.disabled = true;
+        try {
+          const res = await fetch(`${API_BASE}/api/admin/users/${u.id}`, {
+            method: "DELETE",
+            headers: apiHeaders(),
+          });
+          if (!res.ok) { alert((await res.json()).detail || "Failed to eject user."); ejectEl.disabled = false; return; }
+          await refreshAdminModal();
+        } catch { ejectEl.disabled = false; }
+      });
+    }
 
     el.appendChild(row);
   });

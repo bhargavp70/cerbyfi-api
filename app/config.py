@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     # Admins — comma-separated emails, overrideable via ADMIN_EMAILS env var
     admin_emails: str = "bhargavp@hotmail.com"
 
+    # SMTP — set in Railway env vars to enable verification emails
+    smtp_host: Optional[str] = None   # e.g. smtp.gmail.com
+    smtp_port: int = 587              # 587 (STARTTLS) or 465 (SSL)
+    smtp_user: Optional[str] = None   # sender login
+    smtp_pass: Optional[str] = None   # app password
+    smtp_from: Optional[str] = None   # display From (defaults to smtp_user)
+
+    # Public base URL for building email links
+    app_base_url: str = "https://cerbyfi-production.up.railway.app"
+
     @property
     def admin_email_set(self) -> set:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}

@@ -715,6 +715,8 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
 .admin-toggle-btn.promote:hover { background: rgba(255,184,48,0.1); }
 .admin-toggle-btn.demote  { color: var(--red); border-color: rgba(255,77,106,0.4); }
 .admin-toggle-btn.demote:hover  { background: rgba(255,77,106,0.08); }
+.admin-toggle-btn.eject   { color: var(--red); border-color: var(--red); font-weight:700; }
+.admin-toggle-btn.eject:hover   { background: var(--red); color: #fff; }
 
 /* ── Auth modal ── */
 .modal-overlay {

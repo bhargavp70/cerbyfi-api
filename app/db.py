@@ -82,6 +82,12 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
     PRIMARY KEY (portfolio_id, ticker)
 );
 
+CREATE TABLE IF NOT EXISTS verification_tokens (
+    token       TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    expires_at  REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS resources (
     id          TEXT PRIMARY KEY,
     title       TEXT NOT NULL,
@@ -108,6 +114,7 @@ class ScoreDB:
                 "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN can_refresh_ai INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
             ]:
                 try:
                     self._conn.execute(col_sql)
@@ -256,6 +263,54 @@ class ScoreDB:
             )
             self._conn.commit()
         return cur.rowcount > 0
+
+    def verify_email(self, user_id: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE users SET email_verified=1 WHERE id=?", (user_id,)
+            )
+            self._conn.commit()
+
+    def delete_user(self, user_id: str) -> bool:
+        with self._lock:
+            # Cascade: remove watchlist, portfolio holdings, portfolios, tokens
+            self._conn.execute("DELETE FROM watchlist WHERE user_id=?", (user_id,))
+            pids = [r[0] for r in self._conn.execute(
+                "SELECT id FROM portfolios WHERE user_id=?", (user_id,)
+            ).fetchall()]
+            for pid in pids:
+                self._conn.execute("DELETE FROM portfolio_holdings WHERE portfolio_id=?", (pid,))
+            self._conn.execute("DELETE FROM portfolios WHERE user_id=?", (user_id,))
+            self._conn.execute("DELETE FROM verification_tokens WHERE user_id=?", (user_id,))
+            cur = self._conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    # ── Verification tokens ───────────────────────────────────
+
+    def create_verification_token(self, token: str, user_id: str, expires_at: float) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO verification_tokens (token, user_id, expires_at) VALUES (?,?,?)",
+                (token, user_id, expires_at),
+            )
+            self._conn.commit()
+
+    def consume_verification_token(self, token: str) -> Optional[str]:
+        """Returns user_id if token is valid and not expired, then deletes it."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT user_id, expires_at FROM verification_tokens WHERE token=?", (token,)
+            ).fetchone()
+            if not row:
+                return None
+            if time.time() > row["expires_at"]:
+                self._conn.execute("DELETE FROM verification_tokens WHERE token=?", (token,))
+                self._conn.commit()
+                return None
+            self._conn.execute("DELETE FROM verification_tokens WHERE token=?", (token,))
+            self._conn.commit()
+        return row["user_id"]
 
     # ── Watchlist ────────────────────────────────────────────
 

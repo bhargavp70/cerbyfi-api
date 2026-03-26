@@ -55,6 +55,19 @@ def update_user(target_id: str, body: dict, user_id: str = Depends(require_admin
     return {"ok": True}
 
 
+@router.delete("/users/{target_id}")
+def eject_user(target_id: str, user_id: str = Depends(require_admin)):
+    target = score_db.get_user_by_id(target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if target["email"] in settings.admin_email_set:
+        raise HTTPException(status_code=403, detail="Cannot eject a protected admin account.")
+    if target_id == user_id:
+        raise HTTPException(status_code=403, detail="Cannot eject yourself.")
+    score_db.delete_user(target_id)
+    return {"ok": True}
+
+
 @router.delete("/ai-cache/{ticker}")
 def delete_ai_cache(ticker: str, user_id: str = Depends(require_admin)):
     score_db.delete_ai_analysis(ticker.upper())
