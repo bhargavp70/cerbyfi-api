@@ -1115,12 +1115,24 @@ function renderNews(items) {
 
 const KIND_ICONS = { article: "📰", video: "▶️", podcast: "🎙️", tool: "🛠️", book: "📚" };
 
+function youtubeId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1).split("?")[0];
+    if (u.hostname.includes("youtube.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const m = u.pathname.match(/\/embed\/([^/?]+)/);
+      if (m) return m[1];
+    }
+  } catch { /* invalid URL */ }
+  return null;
+}
+
 function renderResources(items) {
   const block = document.getElementById("resources-block");
   const list  = document.getElementById("resources-list");
   const editBtn = document.getElementById("resources-edit-btn");
 
-  // Show edit button for admins
   if (auth.user && auth.user.is_admin) {
     editBtn.style.display = "";
   }
@@ -1135,15 +1147,32 @@ function renderResources(items) {
   items.forEach(item => {
     const div = document.createElement("div");
     div.className = "resource-item-wrap";
+    const ytId = youtubeId(item.url);
     const icon = KIND_ICONS[item.kind] || "🔗";
-    div.innerHTML = `
+
+    const embedHtml = ytId ? `
+      <div class="yt-embed-wrap">
+        <iframe class="yt-embed"
+          src="https://www.youtube.com/embed/${ytId}"
+          title="${escHtml(item.title)}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen loading="lazy"></iframe>
+      </div>
+      <div class="resource-body" style="padding:8px 4px 4px;">
+        <div class="resource-title">${escHtml(item.title)}</div>
+        ${item.description ? `<div class="resource-desc">${escHtml(item.description)}</div>` : ""}
+      </div>` : `
       <a class="resource-item" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">
         <span class="resource-kind-icon">${icon}</span>
         <div class="resource-body">
           <div class="resource-title">${escHtml(item.title)}</div>
           ${item.description ? `<div class="resource-desc">${escHtml(item.description)}</div>` : ""}
         </div>
-      </a>
+      </a>`;
+
+    div.innerHTML = `
+      ${embedHtml}
       ${auth.user && auth.user.is_admin ? `
         <div class="resource-admin-row">
           <button class="wl-clear-btn" onclick="editResource('${item.id}')">Edit</button>
