@@ -1073,15 +1073,32 @@ footer {
     overflow: visible;
     order: 3;
   }
+  :root {
+    --topbar-h: 100px;
+  }
   .topbar {
-    padding: 0 12px;
-    gap: 10px;
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
   }
   .topbar-brand {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar-right {
+    flex-shrink: 0;
+    margin-left: 0;
+  }
+  .counter-text {
     display: none;
   }
   .topbar-search-form {
+    width: 100%;
     max-width: none;
+    flex-basis: 100%;
+    order: 3;
   }
   .hero-card {
     flex-direction: column;
