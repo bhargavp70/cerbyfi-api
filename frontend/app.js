@@ -653,6 +653,7 @@ function hideAll() {
   errorSection.style.display   = "none";
   resultsSection.style.display = "none";
   homeSection.style.display    = "none";
+  document.getElementById("right-indices").style.display = "none";
 }
 function setLoading(bool) {
   analyzeBtn.disabled = bool;
@@ -950,10 +951,12 @@ function showHome() {
   homeSection.style.display = "";
   resultsSection.style.display = "none";
   errorSection.style.display   = "none";
+  document.getElementById("right-indices").style.display = "none";
 }
 
 function hideHome() {
   homeSection.style.display = "none";
+  document.getElementById("right-indices").style.display = "";
 }
 
 function renderSparkline(canvas, values) {
@@ -984,7 +987,11 @@ async function loadHome() {
   } catch { /* silent */ }
 }
 
+// Store indices data for right-panel reuse
+let _lastIndices = [];
+
 function renderIndices(indices) {
+  _lastIndices = indices;
   const grid = document.getElementById("indices-grid");
   grid.innerHTML = "";
   indices.forEach(idx => {
@@ -1008,11 +1015,42 @@ function renderIndices(indices) {
       </div>`;
     grid.appendChild(card);
 
-    // Draw sparkline after appending (needs layout width)
     requestAnimationFrame(() => {
       const spark = card.querySelector("[data-spark]");
       renderSparkline(spark, idx.sparkline);
     });
+  });
+
+  renderRightIndices(indices);
+}
+
+function renderRightIndices(indices) {
+  const list = document.getElementById("right-indices-list");
+  list.innerHTML = "";
+  indices.forEach(idx => {
+    const up = idx.change_pct >= 0;
+    const changeClass = idx.change_pct == null ? "flat" : up ? "up" : "dn";
+    const changeText = idx.change_pct == null ? "—"
+      : `${up ? "+" : ""}${idx.change_pct.toFixed(2)}%`;
+    const priceText = idx.price != null
+      ? idx.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : "—";
+
+    const row = document.createElement("div");
+    row.className = "right-index-row";
+    row.title = "Back to Markets";
+    row.innerHTML = `
+      <span class="right-index-name">${escHtml(idx.name)}</span>
+      <div class="right-index-right">
+        <span class="right-index-price">${priceText}</span>
+        <span class="right-index-chg ${changeClass}">${changeText}</span>
+      </div>`;
+    row.addEventListener("click", () => {
+      state.lastData = null;
+      stopPricePolling();
+      showHome();
+    });
+    list.appendChild(row);
   });
 }
 

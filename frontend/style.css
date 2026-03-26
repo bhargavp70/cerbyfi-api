@@ -1242,6 +1242,47 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   line-height: 1.4;
 }
 
+/* ── Right panel mini indices ── */
+.right-index-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  gap: 8px;
+}
+.right-index-row:hover { background: var(--surface2); }
+
+.right-index-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.right-index-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.right-index-price {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.right-index-chg {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.right-index-chg.up  { background: rgba(0,229,153,0.15); color: var(--accent); }
+.right-index-chg.dn  { background: var(--red-dim); color: var(--red); }
+.right-index-chg.flat { color: var(--muted); }
+
 /* ── Footer ── */
 footer {
   text-align: center;
