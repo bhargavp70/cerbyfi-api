@@ -69,6 +69,12 @@ const errorMsg       = document.getElementById("error-msg");
 const resultsSection = document.getElementById("results-section");
 const watchlistBtn   = document.getElementById("watchlist-btn");
 
+document.querySelector(".topbar-brand").addEventListener("click", () => {
+  state.lastData = null;
+  stopPricePolling();
+  showHome();
+});
+
 // ── Auth state ────────────────────────────────────────────
 const auth = { token: null, user: null };
 const TOKEN_KEY = "cerbyfi_token";
