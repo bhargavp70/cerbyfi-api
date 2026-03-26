@@ -196,14 +196,16 @@
         <div id="indices-grid" class="indices-grid"></div>
       </div>
 
-      <!-- Today's news -->
-      <div class="home-block">
+      <!-- Today's news + Resources side by side -->
+      <div class="home-row">
+
+      <div class="home-block home-block-grow">
         <div class="home-block-title">Today's News</div>
         <div id="news-list" class="news-list"></div>
       </div>
 
       <!-- Recommended resources -->
-      <div class="home-block" id="resources-block" style="display:none;">
+      <div class="home-block home-block-grow" id="resources-block" style="display:none;">
         <div class="home-block-title-row">
           <span class="home-block-title">Recommended Resources</span>
           <button id="resources-edit-btn" class="wl-clear-btn accent-btn" style="display:none;">+ Add</button>
@@ -211,7 +213,9 @@
         <div id="resources-list" class="resources-list"></div>
       </div>
 
-    </div>
+      </div><!-- /home-row -->
+
+    </div><!-- /home-section -->
 
     <!-- Error -->
     <div id="error-section">

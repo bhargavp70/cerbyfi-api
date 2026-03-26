@@ -1065,6 +1065,17 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   margin-bottom: 14px;
 }
 
+.home-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.home-block-grow {
+  flex: 1;
+  min-width: 0;
+}
+
 .home-block-title-row {
   display: flex;
   align-items: center;
@@ -1375,6 +1386,9 @@ footer {
   }
   .indices-grid {
     grid-template-columns: 1fr;
+  }
+  .home-row {
+    flex-direction: column;
   }
 }
 
