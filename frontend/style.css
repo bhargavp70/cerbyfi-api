@@ -1264,6 +1264,14 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   border-radius: 8px;
 }
 
+.res-up-btn, .res-down-btn {
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  opacity: 0.7;
+}
+.res-up-btn:hover, .res-down-btn:hover { opacity: 1; color: var(--blue); }
+.res-up-btn:disabled, .res-down-btn:disabled { opacity: 0.2; cursor: default; }
+
 .resource-admin-row {
   display: flex;
   gap: 6px;

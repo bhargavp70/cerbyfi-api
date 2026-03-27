@@ -1151,7 +1151,7 @@ function renderResources(items) {
   block.style.display = "";
   list.innerHTML = "";
 
-  items.forEach(item => {
+  items.forEach((item, idx) => {
     const div = document.createElement("div");
     div.className = "resource-item-wrap";
     const ytId = youtubeId(item.url);
@@ -1182,11 +1182,23 @@ function renderResources(items) {
       ${embedHtml}
       ${auth.user && auth.user.is_admin ? `
         <div class="resource-admin-row">
+          <button class="wl-clear-btn res-up-btn"   data-id="${item.id}" ${idx === 0 ? "disabled" : ""}>↑</button>
+          <button class="wl-clear-btn res-down-btn" data-id="${item.id}" ${idx === items.length - 1 ? "disabled" : ""}>↓</button>
           <button class="wl-clear-btn" onclick="editResource('${item.id}')">Edit</button>
           <button class="wl-clear-btn" style="color:var(--red);" onclick="deleteResource('${item.id}')">Delete</button>
         </div>` : ""}`;
     list.appendChild(div);
   });
+
+  // Wire up reorder buttons
+  if (auth.user && auth.user.is_admin) {
+    list.querySelectorAll(".res-up-btn").forEach(btn => {
+      btn.addEventListener("click", () => moveResource(btn.dataset.id, items, -1));
+    });
+    list.querySelectorAll(".res-down-btn").forEach(btn => {
+      btn.addEventListener("click", () => moveResource(btn.dataset.id, items, 1));
+    });
+  }
 
   if (auth.user && auth.user.is_admin && !items.length) {
     list.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;">No resources yet. Click "+ Add" to add one.</div>`;
@@ -1202,12 +1214,39 @@ async function addResource() {
   if (!url) return;
   const description = prompt("Short description (optional):") || "";
   const kind = prompt("Kind: article / video / podcast / tool / book", "article") || "article";
+
+  // Place new item at top: position = current minimum - 1
+  let topPosition = 0;
+  try {
+    const existing = await (await fetch(`${API_BASE}/api/market/resources`, { headers: apiHeaders() })).json();
+    if (existing.length) topPosition = Math.min(...existing.map(r => r.position)) - 1;
+  } catch { /* use 0 */ }
+
   const res = await fetch(`${API_BASE}/api/market/resources`, {
     method: "POST",
     headers: apiHeaders(true),
-    body: JSON.stringify({ title, url, description, kind, position: 0 }),
+    body: JSON.stringify({ title, url, description, kind, position: topPosition }),
   });
   if (res.ok) loadHome();
+}
+
+async function moveResource(id, items, direction) {
+  const idx = items.findIndex(r => r.id === id);
+  const swapIdx = idx + direction;
+  if (swapIdx < 0 || swapIdx >= items.length) return;
+
+  const a = items[idx], b = items[swapIdx];
+  await Promise.all([
+    fetch(`${API_BASE}/api/market/resources/${a.id}`, {
+      method: "PUT", headers: apiHeaders(true),
+      body: JSON.stringify({ ...a, position: b.position }),
+    }),
+    fetch(`${API_BASE}/api/market/resources/${b.id}`, {
+      method: "PUT", headers: apiHeaders(true),
+      body: JSON.stringify({ ...b, position: a.position }),
+    }),
+  ]);
+  loadHome();
 }
 
 async function editResource(id) {
