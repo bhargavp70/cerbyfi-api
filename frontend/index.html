@@ -28,6 +28,15 @@
         <span class="admin-stat-label">AI reports cached</span>
         <span class="admin-stat-value" id="admin-ai-cache-count">—</span>
       </div>
+      <div class="admin-stat-row" style="margin-top:12px;">
+        <span class="admin-stat-label">Monthly AI limit (per premium user)</span>
+        <span class="admin-stat-value" style="display:flex;align-items:center;gap:8px;">
+          <input id="admin-ai-limit-input" type="number" min="0" step="1"
+            style="width:72px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.9rem;" />
+          <button id="admin-ai-limit-save" class="admin-toggle-btn promote" style="padding:4px 12px;">Save</button>
+          <span style="font-size:0.74rem;color:var(--muted);">(0 = unlimited)</span>
+        </span>
+      </div>
     </div>
 
     <!-- User list -->

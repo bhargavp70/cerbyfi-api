@@ -4,6 +4,8 @@ from app.db import score_db
 from app.config import settings
 from app.user_auth import require_admin
 
+_ALLOWED_SETTINGS = {"ai_monthly_limit"}
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
@@ -71,4 +73,28 @@ def eject_user(target_id: str, user_id: str = Depends(require_admin)):
 @router.delete("/ai-cache/{ticker}")
 def delete_ai_cache(ticker: str, user_id: str = Depends(require_admin)):
     score_db.delete_ai_analysis(ticker.upper())
+    return {"ok": True}
+
+
+@router.get("/settings")
+def get_settings(user_id: str = Depends(require_admin)):
+    limit = score_db.get_setting("ai_monthly_limit", "")
+    return {
+        "ai_monthly_limit": int(limit) if limit else settings.ai_monthly_limit,
+    }
+
+
+@router.patch("/settings")
+def update_settings(body: dict, user_id: str = Depends(require_admin)):
+    for key, value in body.items():
+        if key not in _ALLOWED_SETTINGS:
+            raise HTTPException(status_code=400, detail=f"Unknown setting: {key}")
+        if key == "ai_monthly_limit":
+            try:
+                v = int(value)
+                if v < 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=422, detail="ai_monthly_limit must be a non-negative integer.")
+            score_db.set_setting(key, str(v))
     return {"ok": True}

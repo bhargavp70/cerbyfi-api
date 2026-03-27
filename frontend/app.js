@@ -263,9 +263,10 @@ async function openAdminModal() {
 
 async function refreshAdminModal() {
   try {
-    const [statsRes, usersRes] = await Promise.all([
+    const [statsRes, usersRes, settingsRes] = await Promise.all([
       fetch(`${API_BASE}/api/admin/stats`, { headers: apiHeaders() }),
       fetch(`${API_BASE}/api/admin/users`, { headers: apiHeaders() }),
+      fetch(`${API_BASE}/api/admin/settings`, { headers: apiHeaders() }),
     ]);
     if (statsRes.ok) {
       const data = await statsRes.json();
@@ -273,12 +274,34 @@ async function refreshAdminModal() {
       document.getElementById("admin-analyses-count").textContent = data.total_analyses.toLocaleString();
       document.getElementById("admin-ai-cache-count").textContent = (data.ai_reports_cached ?? "—").toLocaleString();
     }
+    if (settingsRes.ok) {
+      const s = await settingsRes.json();
+      document.getElementById("admin-ai-limit-input").value = s.ai_monthly_limit;
+    }
     if (usersRes.ok) {
       const users = await usersRes.json();
       renderAdminUserList(users);
     }
   } catch { /* silent */ }
 }
+
+document.getElementById("admin-ai-limit-save").addEventListener("click", async () => {
+  const input = document.getElementById("admin-ai-limit-input");
+  const val = parseInt(input.value, 10);
+  if (isNaN(val) || val < 0) { alert("Enter a valid non-negative number."); return; }
+  const btn = document.getElementById("admin-ai-limit-save");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/settings`, {
+      method: "PATCH",
+      headers: apiHeaders(true),
+      body: JSON.stringify({ ai_monthly_limit: val }),
+    });
+    if (!res.ok) { alert((await res.json()).detail || "Failed to save."); }
+    else { btn.textContent = "Saved!"; setTimeout(() => { btn.textContent = "Save"; btn.disabled = false; }, 1500); return; }
+  } catch { /* silent */ }
+  btn.disabled = false;
+});
 
 function renderAdminUserList(users) {
   const el = document.getElementById("admin-user-list");
@@ -568,9 +591,9 @@ function renderResults(data) {
     document.getElementById("right-indices").style.display = "";
   }
 
-  // AI Analysis section — visible to premium users only
+  // AI Analysis section — visible to all logged-in users
   const aiSection = document.getElementById("ai-analysis-section");
-  if (auth.user?.is_premium) {
+  if (auth.user) {
     aiSection.style.display = "";
     resetAiAnalysis();
   } else {
@@ -712,6 +735,7 @@ async function resetAiAnalysis() {
 
   body.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;">Checking for report…</div>`;
 
+  // Try to load cached report (available to all logged-in users)
   try {
     const ticker = state.lastData.ticker;
     const res = await fetch(`${API_BASE}/api/premium/ai-cache/${ticker}`, { headers: apiHeaders() });
@@ -722,8 +746,28 @@ async function resetAiAnalysis() {
     }
   } catch { /* silent */ }
 
-  body.innerHTML = `<button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>`;
-  document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis());
+  // No cached report — show generate button for premium, upgrade prompt for others
+  if (auth.user?.is_premium) {
+    let usageHtml = "";
+    try {
+      const ur = await fetch(`${API_BASE}/api/premium/ai-usage`, { headers: apiHeaders() });
+      if (ur.ok) {
+        const u = await ur.json();
+        const limitLabel = u.limit === 0 ? "unlimited" : `${u.limit}/mo`;
+        usageHtml = `<div style="font-size:0.78rem;color:var(--muted);margin-top:8px;">${u.used} of ${limitLabel} reports used this month</div>`;
+      }
+    } catch { /* silent */ }
+    body.innerHTML = `
+      <button id="ai-analyze-btn" class="ai-analyze-btn">Get AI Analysis</button>
+      ${usageHtml}`;
+    document.getElementById("ai-analyze-btn").addEventListener("click", () => runAiAnalysis());
+  } else {
+    body.innerHTML = `
+      <div style="color:var(--muted);font-size:0.85rem;line-height:1.6;">
+        No AI report available yet for this ticker.<br>
+        <span style="color:var(--muted);opacity:0.7;font-size:0.8rem;">Premium members can generate AI reports. Upgrade to unlock.</span>
+      </div>`;
+  }
 }
 
 async function runAiAnalysis(forceRefresh = false) {
@@ -753,6 +797,19 @@ async function runAiAnalysis(forceRefresh = false) {
     }
 
     renderAiResult(result, body);
+    // Update usage display if present in response
+    if (result.usage) {
+      const existingUsage = body.querySelector(".ai-usage-line");
+      if (!existingUsage) {
+        const u = result.usage;
+        const limitLabel = u.limit === 0 ? "unlimited" : `${u.limit}/mo`;
+        const usageEl = document.createElement("div");
+        usageEl.className = "ai-usage-line";
+        usageEl.style.cssText = "font-size:0.78rem;color:var(--muted);margin-top:6px;";
+        usageEl.textContent = `${u.used} of ${limitLabel} reports used this month`;
+        body.appendChild(usageEl);
+      }
+    }
   } catch(err) {
     body.innerHTML = `<div style="color:var(--red);font-size:0.85rem;">Error: ${escHtml(err.message || String(err))}</div>`;
   }

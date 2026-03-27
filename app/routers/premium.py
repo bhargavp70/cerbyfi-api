@@ -1,10 +1,11 @@
 """Premium-only endpoints."""
 import time
 import requests
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from app.config import settings
 from app.db import score_db
-from app.user_auth import require_premium
+from app.user_auth import require_premium, require_user
 
 router = APIRouter(prefix="/api/premium", tags=["premium"])
 
@@ -80,9 +81,33 @@ def _call_claude(messages: list, max_turns: int = 12) -> str:
     raise HTTPException(status_code=504, detail="AI analysis timed out (too many search rounds).")
 
 
+def _current_month() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
+def _get_monthly_limit() -> int:
+    """Get the configured monthly AI limit (from DB settings, fallback to config)."""
+    val = score_db.get_setting("ai_monthly_limit", "")
+    if val:
+        try:
+            return int(val)
+        except ValueError:
+            pass
+    return settings.ai_monthly_limit
+
+
+@router.get("/ai-usage")
+def ai_usage_get(user_id: str = Depends(require_user)):
+    """Return current user's AI usage for the current month."""
+    month = _current_month()
+    used = score_db.get_ai_usage(user_id, month)
+    limit = _get_monthly_limit()
+    return {"used": used, "limit": limit, "month": month}
+
+
 @router.get("/ai-cache/{ticker}")
-def ai_cache_get(ticker: str, user_id: str = Depends(require_premium)):
-    """Return the cached AI report for a ticker if one exists, without generating."""
+def ai_cache_get(ticker: str, user_id: str = Depends(require_user)):
+    """Return the cached AI report for a ticker if one exists. Available to all logged-in users."""
     cached_text = score_db.get_ai_analysis(ticker.upper())
     if not cached_text:
         return {"no_cache": True}
@@ -107,11 +132,23 @@ def ai_analyze(body: dict, user_id: str = Depends(require_premium)):
     if force_refresh:
         score_db.delete_ai_analysis(ticker)
 
-    # Return cached report if still fresh (10-day TTL)
+    # Return cached report if still fresh (10-day TTL) — doesn't count toward limit
     cached_text = score_db.get_ai_analysis(ticker)
     if cached_text:
         generated_at = score_db.ai_analysis_cache_info(ticker)
         return {"text": cached_text, "cached": True, "generated_at": generated_at}
+
+    # Enforce monthly generation limit (force_refresh users bypass it)
+    if not force_refresh:
+        month = _current_month()
+        limit = _get_monthly_limit()
+        if limit > 0:
+            used = score_db.get_ai_usage(user_id, month)
+            if used >= limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Monthly AI report limit reached ({limit}/month). Try again next month or ask an admin to increase your limit."
+                )
 
     name   = data.get("name", ticker)
     score  = data.get("total", "?")
@@ -177,4 +214,10 @@ Important:
 
     text = _call_claude([{"role": "user", "content": prompt}])
     score_db.set_ai_analysis(ticker, text)
-    return {"text": text, "cached": False, "generated_at": time.time()}
+    # Track usage (only for non-force_refresh generations)
+    if not force_refresh:
+        score_db.increment_ai_usage(user_id, _current_month())
+    month = _current_month()
+    limit = _get_monthly_limit()
+    used = score_db.get_ai_usage(user_id, month)
+    return {"text": text, "cached": False, "generated_at": time.time(), "usage": {"used": used, "limit": limit}}

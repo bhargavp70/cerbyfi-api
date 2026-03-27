@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Public base URL for building email links
     app_base_url: str = "https://cerbyfi-production.up.railway.app"
 
+    # Monthly AI report limit for premium users (0 = unlimited)
+    ai_monthly_limit: int = 10
+
     @property
     def admin_email_set(self) -> set:
         return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
