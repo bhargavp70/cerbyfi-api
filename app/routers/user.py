@@ -44,6 +44,8 @@ class RegisterIn(BaseModel):
             raise ValueError("Password must be at least 8 characters.")
         if not re.search(r"\d", v):
             raise ValueError("Password must contain at least one number.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one capital letter.")
         if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?`~]", v):
             raise ValueError("Password must contain at least one special character.")
         return v

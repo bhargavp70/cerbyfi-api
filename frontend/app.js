@@ -214,6 +214,7 @@ document.getElementById("register-form").addEventListener("submit", async e => {
   const pw = document.getElementById("reg-password").value;
   if (pw.length < 8)                          { errEl.textContent = "Password must be at least 8 characters."; return; }
   if (!/\d/.test(pw))                         { errEl.textContent = "Password must contain at least one number."; return; }
+  if (!/[A-Z]/.test(pw))                      { errEl.textContent = "Password must contain at least one capital letter."; return; }
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw)) { errEl.textContent = "Password must contain at least one special character."; return; }
 
   submit.disabled = true;
