@@ -1395,10 +1395,24 @@ footer {
     display: block;
     border-left: none;
     border-top: 1px solid var(--border);
-    overflow: visible;
+    overflow: hidden;
+    max-width: 100%;
     order: 3;
     min-height: 0;
     padding: 12px;
+  }
+
+  .top-list {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .top-count {
+    display: none;
+  }
+
+  .top-score {
+    min-width: 0;
   }
 
   .topbar {
