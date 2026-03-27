@@ -23,6 +23,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -31,6 +36,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* ── Topbar ── */
@@ -38,6 +45,8 @@ body {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: var(--topbar-h);
+  width: 100%;
+  max-width: 100vw;
   background: rgba(16,16,31,0.72);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -47,6 +56,7 @@ body {
   gap: 16px;
   padding: 0 20px;
   z-index: 100;
+  overflow: hidden;
 }
 
 .topbar-brand {
@@ -143,9 +153,11 @@ body {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   flex-shrink: 0;
   margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .counter-text {
@@ -161,6 +173,8 @@ body {
   height: calc(100vh - var(--topbar-h));
   margin-top: var(--topbar-h);
   overflow: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* ── Left nav ── */
@@ -728,6 +742,8 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 .modal-box {
   background: var(--surface);
