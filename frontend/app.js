@@ -1235,17 +1235,16 @@ async function moveResource(id, items, direction) {
   const swapIdx = idx + direction;
   if (swapIdx < 0 || swapIdx >= items.length) return;
 
-  const a = items[idx], b = items[swapIdx];
-  await Promise.all([
-    fetch(`${API_BASE}/api/market/resources/${a.id}`, {
+  // Swap in a copy, then save all with clean sequential positions 0,1,2…
+  const newOrder = [...items];
+  [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
+
+  await Promise.all(newOrder.map((item, i) =>
+    fetch(`${API_BASE}/api/market/resources/${item.id}`, {
       method: "PUT", headers: apiHeaders(true),
-      body: JSON.stringify({ ...a, position: b.position }),
-    }),
-    fetch(`${API_BASE}/api/market/resources/${b.id}`, {
-      method: "PUT", headers: apiHeaders(true),
-      body: JSON.stringify({ ...b, position: a.position }),
-    }),
-  ]);
+      body: JSON.stringify({ title: item.title, url: item.url, description: item.description || "", kind: item.kind || "article", position: i }),
+    })
+  ));
   loadHome();
 }
 
