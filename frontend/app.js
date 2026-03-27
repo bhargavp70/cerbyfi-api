@@ -1157,6 +1157,10 @@ function renderResources(items) {
     const ytId = youtubeId(item.url);
     const icon = KIND_ICONS[item.kind] || "🔗";
 
+    let domain = "";
+    try { domain = new URL(item.url).hostname.replace("www.", ""); } catch {}
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32` : "";
+
     const embedHtml = ytId ? `
       <div class="yt-embed-wrap">
         <iframe class="yt-embed"
@@ -1169,13 +1173,16 @@ function renderResources(items) {
       <div class="resource-body" style="padding:8px 4px 4px;">
         <div class="resource-title">${escHtml(item.title)}</div>
         ${item.description ? `<div class="resource-desc">${escHtml(item.description)}</div>` : ""}
+        <div class="resource-source">${icon} ${escHtml(domain)}</div>
       </div>` : `
-      <a class="resource-item" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">
-        <span class="resource-kind-icon">${icon}</span>
-        <div class="resource-body">
-          <div class="resource-title">${escHtml(item.title)}</div>
-          ${item.description ? `<div class="resource-desc">${escHtml(item.description)}</div>` : ""}
+      <a class="resource-snippet" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+        <div class="resource-snippet-header">
+          ${faviconUrl ? `<img class="resource-favicon" src="${faviconUrl}" alt="" loading="lazy" onerror="this.style.display='none'">` : ""}
+          <span class="resource-snippet-domain">${escHtml(domain)}</span>
+          <span class="resource-snippet-kind">${icon}</span>
         </div>
+        <div class="resource-snippet-title">${escHtml(item.title)}</div>
+        ${item.description ? `<div class="resource-snippet-desc">${escHtml(item.description)}</div>` : ""}
       </a>`;
 
     div.innerHTML = `
