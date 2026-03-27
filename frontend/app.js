@@ -209,8 +209,14 @@ document.getElementById("register-form").addEventListener("submit", async e => {
   e.preventDefault();
   const errEl  = document.getElementById("reg-error");
   const submit = document.getElementById("reg-submit");
-  submit.disabled = true;
   errEl.textContent = "";
+
+  const pw = document.getElementById("reg-password").value;
+  if (pw.length < 8)                          { errEl.textContent = "Password must be at least 8 characters."; return; }
+  if (!/\d/.test(pw))                         { errEl.textContent = "Password must contain at least one number."; return; }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw)) { errEl.textContent = "Password must contain at least one special character."; return; }
+
+  submit.disabled = true;
   try {
     const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
