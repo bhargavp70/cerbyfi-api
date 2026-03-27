@@ -1245,7 +1245,7 @@ document.getElementById("nav-signin-btn").addEventListener("click", () => openMo
 document.getElementById("nav-register-btn").addEventListener("click", () => openModal("register"));
 
 // ── Init ──────────────────────────────────────────────────
-initAuth().then(() => { updateNavGuestCta(); renderResources([]); });
+initAuth().then(() => { updateNavGuestCta(); loadHome(); });
 loadTopTickers();
 loadStats();
 loadHome();
