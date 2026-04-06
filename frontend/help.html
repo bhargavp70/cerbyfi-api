@@ -408,12 +408,12 @@
     <section class="help-section" id="accounts">
       <h3><span class="section-icon">👤</span> Creating an account</h3>
 
-      <p>An account gives you a persistent watchlist and access to the portfolio feature.</p>
+      <p>An account gives you a persistent watchlist, access to the portfolio feature, and the ability to view AI Analysis reports.</p>
 
       <ul class="steps">
         <li><span class="step-num">1</span>Click <strong>Register</strong> in the top-right corner.</li>
-        <li><span class="step-num">2</span>Enter your name, email address, and a password (at least 6 characters).</li>
-        <li><span class="step-num">3</span>Click <strong>Create account</strong>. You are logged in immediately.</li>
+        <li><span class="step-num">2</span>Enter your name, email address, and a password that meets all four requirements: at least 8 characters, one uppercase letter, one number, and one special character (e.g. <code>!</code>, <code>@</code>, <code>#</code>).</li>
+        <li><span class="step-num">3</span>Click <strong>Create account</strong>. You are logged in immediately and a verification email is sent to your address.</li>
       </ul>
 
       <p>To sign back in later, click <strong>Sign in</strong> and enter your email and password. You stay signed in for 30 days.</p>
@@ -484,34 +484,35 @@
     <section class="help-section" id="optimize">
       <h3><span class="section-icon">⚡</span> Portfolio Optimizer — how it works</h3>
 
-      <p>The optimizer answers one question: <strong>what allocation across your current holdings produces the highest possible aggregate score?</strong></p>
+      <p>The optimizer recommends a new allocation across your current holdings that creates a <strong>balanced, real portfolio</strong> — one where every holding is given weight based on the unique strengths it contributes, not just its overall score.</p>
 
-      <p>It does not suggest new stocks to add or remove. It works only with the holdings you already have and finds the best percentage split between them.</p>
+      <p>It does not suggest new stocks to add or remove. It works only with the holdings you already have.</p>
 
       <div class="help-subsection">
         <h4>How to use it</h4>
       </div>
       <ul class="steps">
-        <li><span class="step-num">1</span>Open a portfolio that has at least 2 holdings with scores.</li>
+        <li><span class="step-num">1</span>Open a portfolio that has at least 2 holdings with scores. For best results, make sure each holding has been individually analyzed (so its full category breakdown is available).</li>
         <li><span class="step-num">2</span>Click the <strong>Optimize</strong> button.</li>
-        <li><span class="step-num">3</span>A panel appears showing your current aggregate score and the optimized score, plus the suggested allocation for each holding.</li>
-        <li><span class="step-num">4</span>Review the suggestions. If you are happy with them, click <strong>Apply Allocation</strong> to save.</li>
-        <li><span class="step-num">5</span>Click <strong>Optimize</strong> again to close the panel without applying.</li>
+        <li><span class="step-num">3</span>A panel shows your current aggregate score, the optimized score, and the suggested allocation for each holding.</li>
+        <li><span class="step-num">4</span>Review the suggestions and click <strong>Apply Allocation</strong> to save, or click <strong>Optimize</strong> again to dismiss without applying.</li>
       </ul>
 
       <div class="help-subsection">
-        <h4>The algorithm — plain English</h4>
+        <h4>The algorithm — category complementarity</h4>
       </div>
 
-      <p>The optimizer uses a <strong>greedy algorithm</strong> with two rules:</p>
+      <p>Each stock or ETF is scored across multiple categories (e.g. Growth, Valuation, Financial Strength, Profitability, Momentum). The optimizer uses all of these individual category scores — not just the overall total — to assign weight.</p>
+
+      <p>The core idea: <strong>a holding that is uniquely strong in a category where others are weak deserves more of your portfolio</strong>. Two holdings that are both excellent at Growth but mediocre at Valuation are redundant in that dimension — the portfolio should find the holding that covers Valuation better and give it appropriate weight.</p>
 
       <div class="example-box">
-        <div class="example-box-title">Optimizer rules</div>
+        <div class="example-box-title">Optimizer constraints</div>
         <table class="example-table">
           <thead><tr><th>Rule</th><th>Value</th><th>Why</th></tr></thead>
           <tbody>
-            <tr><td>Minimum per holding (floor)</td><td>5%</td><td>Ensures every holding is represented — if you added it, it gets at least a small weight</td></tr>
-            <tr><td>Maximum per holding (cap)</td><td>60%</td><td>Prevents extreme concentration in a single holding</td></tr>
+            <tr><td>Minimum per holding (floor)</td><td>5%</td><td>Every holding you added stays represented — nothing drops to zero</td></tr>
+            <tr><td>Maximum per holding (cap)</td><td>50%</td><td>Prevents extreme concentration — no single stock dominates the portfolio</td></tr>
           </tbody>
         </table>
       </div>
@@ -519,104 +520,95 @@
       <p>Here is what happens step by step:</p>
 
       <ul class="steps">
-        <li><span class="step-num">1</span><strong>Give everyone the floor.</strong> Every holding starts at 5%. The remaining budget is 100% minus (5% × number of holdings). For example, with 4 holdings: 100% − 20% = 80% remaining.</li>
-        <li><span class="step-num">2</span><strong>Rank by score.</strong> Holdings are sorted from highest score to lowest.</li>
-        <li><span class="step-num">3</span><strong>Fill the best holding first.</strong> Give as much of the remaining budget as possible to the #1 ranked holding, up to the 60% cap. Since it already has 5% from the floor, it can receive up to 55% more (reaching 60% total).</li>
-        <li><span class="step-num">4</span><strong>Move to the next holding.</strong> Give as much of whatever is left to the #2 ranked holding, again up to the 60% cap. Repeat until the budget runs out or all holdings have been given their cap.</li>
+        <li><span class="step-num">1</span><strong>Load category data.</strong> The optimizer looks up the full category breakdown for each holding from the score cache (e.g. AAPL's Growth score, Valuation score, Financial Strength score, etc.).</li>
+        <li><span class="step-num">2</span><strong>Compute fractional share per category.</strong> For each category, the optimizer divides each holding's score by the sum of all holdings' scores in that category. This gives each holding a fractional share — how much of the portfolio's "coverage" of that category it provides.</li>
+        <li><span class="step-num">3</span><strong>Sum across all categories.</strong> Each holding's fractional shares are added up across every category. A holding that tops Growth AND covers Valuation well earns more total credit than one that is simply average across the board.</li>
+        <li><span class="step-num">4</span><strong>Allocate proportionally.</strong> Every holding gets the 5% floor. The remaining 80%+ is distributed proportionally to the summed contributions, capped at 50% per holding.</li>
       </ul>
 
       <div class="callout callout-tip">
-        <span class="callout-label">Key insight:</span> Because the aggregate score is a weighted average, putting more weight on higher-scoring holdings always increases (or maintains) the total. The optimizer is mathematically guaranteed to produce a score <em>equal to or higher</em> than your current allocation.
+        <span class="callout-label">Key insight:</span> A holding earns full credit in a category where it alone scores high. It shares credit proportionally when multiple holdings score similarly. This naturally rewards <em>complementary</em> holdings — stocks that cover different strengths — and prevents concentration in the top 1–2 scorers.
       </div>
 
       <div class="help-subsection">
         <h4>Worked example</h4>
       </div>
 
-      <p>Suppose you have a 3-stock portfolio with these scores and current allocations:</p>
+      <p>Suppose you have a 4-stock portfolio. Their individual category scores (as %) are:</p>
 
       <div class="example-box">
-        <div class="example-box-title">Current allocation</div>
+        <div class="example-box-title">Per-category scores</div>
         <table class="example-table">
-          <thead><tr><th>Stock</th><th>Score</th><th>Allocation</th><th>Contribution</th></tr></thead>
+          <thead><tr><th>Stock</th><th>Growth</th><th>Valuation</th><th>Fin. Strength</th><th>Profitability</th><th>Momentum</th><th>Overall</th></tr></thead>
           <tbody>
-            <tr><td>AAPL</td><td class="score-green">80</td><td>20%</td><td>16.0</td></tr>
-            <tr><td>MSFT</td><td class="score-green">72</td><td>55%</td><td>39.6</td></tr>
-            <tr><td>TSLA</td><td class="score-red">38</td><td>25%</td><td>9.5</td></tr>
-            <tr><td><strong>Total</strong></td><td></td><td><strong>100%</strong></td><td><strong>65.1</strong></td></tr>
+            <tr><td>AAPL</td><td>85%</td><td>45%</td><td>80%</td><td>88%</td><td>72%</td><td class="score-green">74%</td></tr>
+            <tr><td>MSFT</td><td>80%</td><td>52%</td><td>88%</td><td>85%</td><td>68%</td><td class="score-green">75%</td></tr>
+            <tr><td>BRK.B</td><td>42%</td><td>78%</td><td>90%</td><td>75%</td><td>55%</td><td class="score-green">68%</td></tr>
+            <tr><td>TSLA</td><td>75%</td><td>28%</td><td>55%</td><td>48%</td><td>82%</td><td class="score-amber">58%</td></tr>
           </tbody>
         </table>
       </div>
 
-      <p>The optimizer applies its rules:</p>
-      <ul class="steps">
-        <li><span class="step-num">1</span>Floor: each holding gets 5%. Remaining budget = 100% − 15% = 85%.</li>
-        <li><span class="step-num">2</span>Ranked order: AAPL (80) → MSFT (72) → TSLA (38).</li>
-        <li><span class="step-num">3</span>AAPL gets filled to the cap: already has 5%, gets 55% more → <strong>60%</strong>. Remaining = 85% − 55% = 30%.</li>
-        <li><span class="step-num">4</span>MSFT gets filled to the cap: already has 5%, gets 30% more (cap is 55 headroom, but only 30 left) → <strong>35%</strong>. Remaining = 0%.</li>
-        <li><span class="step-num">5</span>TSLA stays at floor: <strong>5%</strong>.</li>
+      <p>For each category, the optimizer computes each holding's fractional share. For example, in <strong>Valuation</strong> (total = 45+52+78+28 = 203):</p>
+      <ul class="steps" style="margin-top:8px;">
+        <li><span class="step-num">·</span>AAPL: 45/203 = 22% · MSFT: 52/203 = 26% · <strong>BRK.B: 78/203 = 38%</strong> · TSLA: 28/203 = 14%</li>
       </ul>
+      <p>BRK.B earns by far the most Valuation credit because it is uniquely strong there while others are weak. This credit accumulates across all five categories to determine the final allocation:</p>
 
       <div class="example-box">
-        <div class="example-box-title">Optimized allocation</div>
+        <div class="example-box-title">Old vs. new optimizer result</div>
         <table class="example-table">
-          <thead><tr><th>Stock</th><th>Score</th><th>Current</th><th>Optimized</th><th>Contribution</th></tr></thead>
+          <thead><tr><th>Stock</th><th>Overall score</th><th>Old (greedy)</th><th>New (category)</th></tr></thead>
           <tbody>
-            <tr>
-              <td>AAPL</td>
-              <td class="score-green">80</td>
-              <td>20%</td>
-              <td class="arrow-cell">60%</td>
-              <td>48.0</td>
-            </tr>
-            <tr>
-              <td>MSFT</td>
-              <td class="score-green">72</td>
-              <td>55%</td>
-              <td class="arrow-cell">35%</td>
-              <td>25.2</td>
-            </tr>
-            <tr>
-              <td>TSLA</td>
-              <td class="score-red">38</td>
-              <td>25%</td>
-              <td class="arrow-cell">5%</td>
-              <td>1.9</td>
-            </tr>
-            <tr>
-              <td><strong>Total</strong></td>
-              <td></td>
-              <td><strong>65.1</strong></td>
-              <td></td>
-              <td><strong class="score-green">75.1 ↑</strong></td>
-            </tr>
+            <tr><td>AAPL</td><td class="score-green">74%</td><td>35%</td><td class="arrow-cell">26%</td></tr>
+            <tr><td>MSFT</td><td class="score-green">75%</td><td>50%</td><td class="arrow-cell">27%</td></tr>
+            <tr><td>BRK.B</td><td class="score-green">68%</td><td>10%</td><td class="arrow-cell">26%</td></tr>
+            <tr><td>TSLA</td><td class="score-amber">58%</td><td>5%</td><td class="arrow-cell">21%</td></tr>
           </tbody>
         </table>
       </div>
 
-      <p>The optimized allocation raises the aggregate score from <span class="score-amber">65.1</span> to <span class="score-green">75.1</span> — a gain of 10 points — simply by shifting weight toward the highest-scoring holdings.</p>
+      <p>The old greedy approach concentrated 85% of the portfolio in the top two scorers (AAPL and MSFT) and left BRK.B and TSLA at near-zero despite their real contributions. The new algorithm recognises that BRK.B provides unique Valuation and Financial Strength coverage, and TSLA uniquely leads Momentum — giving both meaningful weight and producing a genuinely diversified portfolio.</p>
 
       <div class="help-subsection">
         <h4>What the optimizer does NOT do</h4>
       </div>
-      <p>It is important to understand the limits of the optimizer:</p>
       <ul class="steps">
         <li><span class="step-num">✗</span>It does <strong>not</strong> predict future performance. A high score today does not guarantee future returns.</li>
-        <li><span class="step-num">✗</span>It does <strong>not</strong> consider diversification, sector exposure, or correlation between holdings.</li>
-        <li><span class="step-num">✗</span>It does <strong>not</strong> account for your personal risk tolerance or investment horizon.</li>
+        <li><span class="step-num">✗</span>It does <strong>not</strong> account for sector overlap, correlation, or macroeconomic risk.</li>
+        <li><span class="step-num">✗</span>It does <strong>not</strong> consider your personal risk tolerance or investment horizon.</li>
         <li><span class="step-num">✗</span>It does <strong>not</strong> suggest adding or removing holdings — only rebalancing what is already there.</li>
       </ul>
 
       <div class="callout callout-note">
-        <span class="callout-label">In short:</span> The optimizer is a mathematical tool that maximizes a score within fixed constraints. Use it as one input among many, not as investment advice.
+        <span class="callout-label">In short:</span> The optimizer is a mathematical tool for finding a well-diversified allocation based on fundamental scores. Use it as one input among many, not as investment advice.
       </div>
     </section>
 
     <!-- ── 7. AI Analysis ────────────────────────────────────── -->
     <section class="help-section" id="ai-analysis">
-      <h3><span class="section-icon">🤖</span> AI Analysis (Premium)</h3>
+      <h3><span class="section-icon">🤖</span> AI Analysis</h3>
 
-      <p>For Premium users, an <strong>AI Analysis</strong> section appears below the score breakdown after analyzing a ticker. It automatically loads if a cached report already exists for that ticker. If no report exists yet, a <strong>"Get AI Analysis"</strong> button lets you generate one on demand.</p>
+      <p>An <strong>AI Analysis</strong> section appears below the score breakdown for any signed-in user. Whether you see a report, a generate button, or an upgrade prompt depends on your account tier and whether a cached report exists for that ticker.</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Access levels</div>
+        <table class="example-table">
+          <thead><tr><th>Situation</th><th>What you see</th></tr></thead>
+          <tbody>
+            <tr><td>Not signed in</td><td>AI Analysis section is hidden</td></tr>
+            <tr><td>Signed in, cached report exists</td><td>Report displayed immediately for free</td></tr>
+            <tr><td>Signed in (free), no cached report</td><td>"No report available yet" — upgrade prompt</td></tr>
+            <tr><td>Premium, no cached report</td><td><strong>"Get AI Analysis"</strong> button to generate one</td></tr>
+            <tr><td>Premium, monthly limit reached</td><td>Error shown — limit resets at the start of next month</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="help-subsection">
+        <h4>Monthly generation limit</h4>
+      </div>
+      <p>Premium users can generate up to <strong>10 new AI reports per month</strong> by default (the limit is configurable by the site administrator). Reading a cached report that was already generated by someone else does not count toward your limit. The counter resets on the 1st of each month.</p>
 
       <div class="help-subsection">
         <h4>What the report includes</h4>
@@ -641,20 +633,20 @@
       <div class="help-subsection">
         <h4>Caching</h4>
       </div>
-      <p>Reports are cached for <strong>10 days</strong>. Once a report has been generated for a ticker, any premium user requesting that same ticker will receive the cached report instantly. A <strong>"Cached · Generated [date]"</strong> badge is displayed when a cached report is served.</p>
+      <p>Reports are cached for <strong>10 days</strong>. Once any premium user generates a report for a ticker, all signed-in users can read that cached report for free. A <strong>"Cached · Generated [date]"</strong> badge indicates a cached report. Generating a cached report does not count toward the monthly limit for anyone reading it.</p>
 
       <div class="help-subsection">
         <h4>PDF download</h4>
       </div>
-      <p>A <strong>"↓ Download PDF"</strong> button is available on every report. Clicking it opens a new tab with a print-friendly version of the report. Use your browser's print dialog (<strong>Cmd+P</strong> on Mac, <strong>Ctrl+P</strong> on Windows) and select <strong>"Save as PDF"</strong> as the destination.</p>
+      <p>A <strong>"↓ Download PDF"</strong> button is available on every report. Clicking it opens a new tab with a print-friendly version. Use your browser's print dialog (<strong>Cmd+P</strong> on Mac, <strong>Ctrl+P</strong> on Windows) and select <strong>"Save as PDF"</strong>.</p>
 
       <div class="help-subsection">
         <h4>Refresh</h4>
       </div>
-      <p>If an administrator has enabled the Refresh flag for your account, a <strong>"↺ Refresh"</strong> button will appear alongside the report. This lets you force-generate a new report for the ticker, bypassing the cache.</p>
+      <p>If an administrator has enabled the Refresh flag for your account, a <strong>"↺ Refresh"</strong> button appears alongside the report. This forces a new report to be generated for that ticker, bypassing the 10-day cache. Refresh does not count toward your monthly limit.</p>
 
       <div class="callout callout-note">
-        <span class="callout-label">Note:</span> Premium access is granted by an administrator. Contact the site owner to request premium access.
+        <span class="callout-label">Note:</span> Premium access and the Refresh flag are granted by an administrator. Contact the site owner to request an upgrade.
       </div>
     </section>
 
@@ -676,7 +668,12 @@
 
       <div class="faq-item">
         <div class="faq-q">The optimizer shows the same score before and after. Why?</div>
-        <div class="faq-a">If your current allocation already has the most weight on your highest-scoring holdings (within the floor/cap rules), the optimizer cannot improve it further. This is the mathematically optimal point for your current holdings.</div>
+        <div class="faq-a">Your current allocations may already closely match what the category-complementarity algorithm recommends. This can happen if you manually built a balanced portfolio, or if your holdings have very similar per-category scores so no rebalancing produces a meaningful change.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Why does the optimizer give roughly equal weight to all my holdings?</div>
+        <div class="faq-a">Equal weights are the natural result when holdings have complementary strengths — each covers different categories well. If AAPL leads Growth, BRK.B leads Valuation, and MSFT leads Financial Strength, the optimizer gives all three similar weight because each is uniquely valuable in different dimensions. This is the intended behavior for a real, diversified portfolio.</div>
       </div>
 
       <div class="faq-item">
