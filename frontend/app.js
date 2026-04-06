@@ -642,7 +642,7 @@ function buildMetricsTable(metrics) {
     const p = m.max > 0 ? Math.round(m.score / m.max * 100) : 0;
     return `<tr>
       <td class="mt-label">${m.label}</td>
-      <td class="mt-val"><span class="mt-display">${m.display}</span><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></td>
+      <td class="mt-val"><div class="mt-val-inner"><span class="mt-display">${m.display}</span><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></div></td>
     </tr>`;
   }).join("");
   return `<table class="metrics-table"><tbody>${rows}</tbody></table>`;
