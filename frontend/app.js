@@ -640,12 +640,15 @@ function buildCategoryCard(cat) {
 function buildMetricsTable(metrics) {
   const rows = Object.values(metrics).map(m => {
     const p = m.max > 0 ? Math.round(m.score / m.max * 100) : 0;
-    return `<tr>
-      <td class="mt-label">${m.label}</td>
-      <td class="mt-val"><div class="mt-val-inner"><span class="mt-display">${m.display}</span><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></div></td>
-    </tr>`;
+    return `<div class="metric-row">
+      <span class="metric-label">${m.label}</span>
+      <span class="metric-right">
+        <span class="metric-value">${m.display}</span>
+        <span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span>
+      </span>
+    </div>`;
   }).join("");
-  return `<table class="metrics-table"><tbody>${rows}</tbody></table>`;
+  return `<div class="metrics-list">${rows}</div>`;
 }
 
 // ── Analysis counter ──────────────────────────────────────
