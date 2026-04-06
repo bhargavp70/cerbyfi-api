@@ -502,12 +502,13 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
-  padding: 0 16px 12px;
+  padding: 0 12px 12px;
   display: table;
 }
-.metrics-table td { padding: 5px 16px; color: var(--muted); vertical-align: middle; }
-.metrics-table td:first-child { color: var(--text); }
-.metrics-table td:last-child { text-align: right; white-space: nowrap; }
+.metrics-table td { padding: 4px 4px; color: var(--muted); vertical-align: middle; }
+.metrics-table td:first-child { color: var(--text); padding-left: 0; }
+.metrics-table td:nth-child(2) { white-space: nowrap; padding: 4px 6px; }
+.metrics-table td:last-child { text-align: right; white-space: nowrap; width: 1%; padding-right: 0; }
 .mini-score {
   font-size: 0.72rem;
   font-weight: 600;
