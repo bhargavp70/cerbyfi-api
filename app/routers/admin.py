@@ -1,8 +1,13 @@
 """Admin-only endpoints."""
-from fastapi import APIRouter, Depends, HTTPException
+import secrets
+import time
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.db import score_db
 from app.config import settings
-from app.user_auth import require_admin
+from app.user_auth import require_admin, optional_user
+
+FEEDBACK_MAX_TOTAL = 300
+FEEDBACK_MAX_WORDS = 200
 
 _ALLOWED_SETTINGS = {"ai_monthly_limit"}
 
@@ -97,4 +102,51 @@ def update_settings(body: dict, user_id: str = Depends(require_admin)):
             except (ValueError, TypeError):
                 raise HTTPException(status_code=422, detail="ai_monthly_limit must be a non-negative integer.")
             score_db.set_setting(key, str(v))
+    return {"ok": True}
+
+
+# ── Feedback ──────────────────────────────────────────────────
+
+@router.post("/feedback", dependencies=[])
+def submit_feedback(body: dict, user_id: str = Depends(optional_user)):
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Feedback text is required.")
+    words = len(text.split())
+    if words > FEEDBACK_MAX_WORDS:
+        raise HTTPException(status_code=422, detail=f"Feedback must be {FEEDBACK_MAX_WORDS} words or fewer.")
+    if score_db.count_feedback() >= FEEDBACK_MAX_TOTAL:
+        raise HTTPException(status_code=429, detail="Feedback limit reached. Thank you for your interest!")
+
+    user_name = None
+    if user_id:
+        u = score_db.get_user_by_id(user_id)
+        user_name = u["name"] if u else None
+
+    score_db.add_feedback(
+        id=secrets.token_urlsafe(12),
+        user_id=user_id,
+        user_name=user_name,
+        text=text,
+    )
+    return {"ok": True}
+
+
+@router.get("/feedback")
+def get_feedback(user_id: str = Depends(require_admin)):
+    rows = score_db.list_feedback()
+    return [
+        {
+            "id": r["id"],
+            "user_name": r["user_name"] or "Anonymous",
+            "text": r["text"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/feedback/{feedback_id}")
+def delete_feedback(feedback_id: str, user_id: str = Depends(require_admin)):
+    score_db.delete_feedback(feedback_id)
     return {"ok": True}

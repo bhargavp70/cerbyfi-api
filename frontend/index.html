@@ -39,11 +39,23 @@
       </div>
     </div>
 
-    <!-- User list -->
-    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">
-      Users
+    <!-- Admin tabs -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <button class="modal-tab active" id="admin-tab-users" onclick="adminShowTab('users')">Users</button>
+      <button class="modal-tab" id="admin-tab-feedback" onclick="adminShowTab('feedback')">Feedback</button>
     </div>
-    <div id="admin-user-list" style="overflow-y:auto;flex:1;"></div>
+
+    <!-- User list -->
+    <div id="admin-panel-users" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">Users</div>
+      <div id="admin-user-list" style="overflow-y:auto;flex:1;"></div>
+    </div>
+
+    <!-- Feedback list -->
+    <div id="admin-panel-feedback" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px;">User Feedback</div>
+      <div id="admin-feedback-list" style="overflow-y:auto;flex:1;"></div>
+    </div>
   </div>
 </div>
 
@@ -122,6 +134,7 @@
     <div class="nav-section">
       <div class="nav-label">Menu</div>
       <a href="/help.html" class="nav-item"><span class="nav-icon">❓</span>Help</a>
+      <button class="nav-item" id="btn-open-feedback" style="width:100%;border:none;background:none;cursor:pointer;text-align:left;"><span class="nav-icon">💬</span>Feedback</button>
     </div>
 
     <!-- Shown when logged out -->
@@ -320,7 +333,24 @@
   Data: Finnhub &nbsp;·&nbsp; Financial Modeling Prep &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; <a href="/help.html" style="color:var(--muted);">Help</a>
 </footer>
 
+<!-- Feedback modal -->
+<div id="feedback-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:460px;">
+    <button class="modal-close" id="feedback-modal-close">✕</button>
+    <h3 style="margin-bottom:6px;font-size:1.05rem;">Share Feedback</h3>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px;">Help us improve CerbyFi. Max 200 words.</p>
+    <textarea id="feedback-text"
+      placeholder="Tell us what you think..."
+      style="width:100%;height:140px;padding:12px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:0.92rem;font-family:inherit;resize:vertical;outline:none;"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+      <span id="feedback-word-count" style="font-size:0.78rem;color:var(--muted);">0 / 200 words</span>
+      <span id="feedback-error" style="font-size:0.78rem;color:var(--red);"></span>
+    </div>
+    <button id="feedback-submit" class="auth-submit" style="margin-top:14px;">Submit Feedback</button>
+  </div>
+</div>
+
 <script src="/config.js"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

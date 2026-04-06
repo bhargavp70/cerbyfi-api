@@ -109,6 +109,14 @@ CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS feedback (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT,
+    user_name  TEXT,
+    text       TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
 """
 
 
@@ -596,6 +604,33 @@ class ScoreDB:
             self._conn.execute(
                 "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, value)
             )
+            self._conn.commit()
+
+    # ── Feedback ──────────────────────────────────────────────
+
+    def count_feedback(self) -> int:
+        with self._lock:
+            row = self._conn.execute("SELECT COUNT(*) AS n FROM feedback").fetchone()
+            return row["n"] if row else 0
+
+    def add_feedback(self, id: str, user_id: Optional[str], user_name: Optional[str], text: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO feedback (id, user_id, user_name, text, created_at) VALUES (?, ?, ?, ?, ?)",
+                (id, user_id, user_name, text, time.time())
+            )
+            self._conn.commit()
+
+    def list_feedback(self, limit: int = 300) -> list:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM feedback ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def delete_feedback(self, id: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM feedback WHERE id = ?", (id,))
             self._conn.commit()
 
 

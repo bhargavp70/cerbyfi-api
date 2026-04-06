@@ -382,6 +382,93 @@ function renderAdminUserList(users) {
   });
 }
 
+// ── Admin tab switcher ────────────────────────────────────
+function adminShowTab(tab) {
+  document.getElementById("admin-panel-users").style.display    = tab === "users"    ? "flex" : "none";
+  document.getElementById("admin-panel-feedback").style.display = tab === "feedback" ? "flex" : "none";
+  document.getElementById("admin-tab-users").classList.toggle("active",    tab === "users");
+  document.getElementById("admin-tab-feedback").classList.toggle("active", tab === "feedback");
+  if (tab === "feedback") loadAdminFeedback();
+}
+
+async function loadAdminFeedback() {
+  const el = document.getElementById("admin-feedback-list");
+  el.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;padding:8px 0;">Loading…</div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/feedback`, { headers: apiHeaders() });
+    if (!res.ok) { el.innerHTML = `<div style="color:var(--red);">Failed to load.</div>`; return; }
+    const items = await res.json();
+    if (!items.length) { el.innerHTML = `<div style="color:var(--muted);font-size:0.85rem;padding:8px 0;">No feedback yet.</div>`; return; }
+    el.innerHTML = "";
+    items.forEach(f => {
+      const d = new Date(f.created_at * 1000);
+      const row = document.createElement("div");
+      row.style.cssText = "padding:12px 0;border-bottom:1px solid var(--border);";
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:0.82rem;font-weight:600;color:var(--text);">${escHtml(f.user_name)}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:0.72rem;color:var(--muted);">${d.toLocaleDateString()}</span>
+            <button class="admin-toggle-btn eject" data-id="${f.id}" style="font-size:0.72rem;padding:2px 8px;">Delete</button>
+          </span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--muted);line-height:1.5;">${escHtml(f.text)}</div>`;
+      row.querySelector(".eject").addEventListener("click", async (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        await fetch(`${API_BASE}/api/admin/feedback/${f.id}`, { method: "DELETE", headers: apiHeaders() });
+        row.remove();
+      });
+      el.appendChild(row);
+    });
+  } catch { el.innerHTML = `<div style="color:var(--red);">Error loading feedback.</div>`; }
+}
+
+// ── Feedback modal ────────────────────────────────────────
+const feedbackModal = document.getElementById("feedback-modal");
+document.getElementById("feedback-modal-close").addEventListener("click", () => { feedbackModal.style.display = "none"; });
+feedbackModal.addEventListener("click", e => { if (e.target === feedbackModal) feedbackModal.style.display = "none"; });
+
+document.getElementById("btn-open-feedback").addEventListener("click", () => {
+  document.getElementById("feedback-text").value = "";
+  document.getElementById("feedback-word-count").textContent = "0 / 200 words";
+  document.getElementById("feedback-error").textContent = "";
+  feedbackModal.style.display = "flex";
+});
+
+document.getElementById("feedback-text").addEventListener("input", () => {
+  const words = document.getElementById("feedback-text").value.trim().split(/\s+/).filter(Boolean).length;
+  const wc = document.getElementById("feedback-word-count");
+  wc.textContent = `${words} / 200 words`;
+  wc.style.color = words > 200 ? "var(--red)" : "var(--muted)";
+});
+
+document.getElementById("feedback-submit").addEventListener("click", async () => {
+  const text = document.getElementById("feedback-text").value.trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const errEl = document.getElementById("feedback-error");
+  errEl.textContent = "";
+  if (!text) { errEl.textContent = "Please write something."; return; }
+  if (words > 200) { errEl.textContent = "Too long — keep it under 200 words."; return; }
+  const btn = document.getElementById("feedback-submit");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/feedback`, {
+      method: "POST",
+      headers: apiHeaders(true),
+      body: JSON.stringify({ text }),
+    });
+    if (res.ok) {
+      btn.textContent = "Thank you!";
+      setTimeout(() => { feedbackModal.style.display = "none"; btn.textContent = "Submit Feedback"; btn.disabled = false; }, 1500);
+    } else {
+      const d = await res.json();
+      errEl.textContent = d.detail || "Failed to submit.";
+      btn.disabled = false; btn.textContent = "Submit Feedback";
+    }
+  } catch { errEl.textContent = "Network error."; btn.disabled = false; btn.textContent = "Submit Feedback"; }
+});
+
 // ── Watchlist (requires account) ──────────────────────────
 let cachedWatchlist = [];
 
