@@ -641,9 +641,8 @@ function buildMetricsTable(metrics) {
   const rows = Object.values(metrics).map(m => {
     const p = m.max > 0 ? Math.round(m.score / m.max * 100) : 0;
     return `<tr>
-      <td>${m.label}</td>
-      <td>${m.display}</td>
-      <td><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></td>
+      <td class="mt-label">${m.label}</td>
+      <td class="mt-val"><span class="mt-display">${m.display}</span><span class="mini-score" style="color:${scoreColor(p)}">${m.score}/${m.max}</span></td>
     </tr>`;
   }).join("");
   return `<table class="metrics-table"><tbody>${rows}</tbody></table>`;
