@@ -471,11 +471,12 @@ body {
 .category-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 6px 16px 10px;
+  gap: 8px;
 }
-.category-label { font-weight: 600; font-size: 0.85rem; }
-.category-score { font-size: 0.8rem; color: var(--muted); }
+.category-label { font-weight: 600; font-size: 0.85rem; flex: 1; min-width: 0; }
+.category-score { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
 
 .cat-bar-wrap { padding: 0 16px 12px; }
 
