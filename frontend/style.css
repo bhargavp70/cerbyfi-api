@@ -523,9 +523,9 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
 .metric-right {
   flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
 }
 
 .metric-value {
