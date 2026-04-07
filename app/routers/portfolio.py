@@ -1,10 +1,9 @@
 """Portfolio management: create, manage holdings, optimize allocations."""
 import uuid
-import time
-import asyncio
-import httpx
+import requests as _requests
 from datetime import datetime
 from typing import List, Optional
+from anyio import to_thread
 from fastapi import APIRouter, Depends, HTTPException
 from app.db import score_db
 from app.user_auth import require_user
@@ -12,6 +11,8 @@ from app.models import (
     HoldingIn, HoldingOut, HoldingsIn,
     PortfolioOut, OptimizedHolding, OptimizeResponse,
 )
+
+_YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 router = APIRouter(prefix="/api/me/portfolios", tags=["portfolio"])
 
@@ -263,27 +264,31 @@ def optimize_portfolio(portfolio_id: str, user_id: str = Depends(require_user)):
 
 # ── Performance (money tracking) ──────────────────────────
 
-async def _fetch_price_and_dividends(client: httpx.AsyncClient, ticker: str, purchase_date: Optional[str]):
-    """Fetch current price and dividends-since-purchase from Yahoo Finance."""
-    headers = {"User-Agent": "Mozilla/5.0"}
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=10y&events=dividends"
+def _fetch_price_and_dividends_sync(ticker: str, purchase_date: Optional[str]):
+    """Fetch current price and dividends-since-purchase from Yahoo Finance (sync)."""
     try:
-        r = await client.get(url, headers=headers, timeout=10.0)
+        r = _requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
+            params={"interval": "1d", "range": "10y", "events": "dividends"},
+            headers=_YAHOO_HEADERS,
+            timeout=12,
+        )
         data = r.json()
         result = data.get("chart", {}).get("result", [{}])[0]
         meta = result.get("meta", {})
         current_price = meta.get("regularMarketPrice") or meta.get("previousClose")
 
         dividends_per_share = 0.0
+        cutoff = 0.0
         if purchase_date:
             try:
                 cutoff = datetime.strptime(purchase_date, "%Y-%m-%d").timestamp()
             except Exception:
-                cutoff = 0.0
-            divs = result.get("events", {}).get("dividends", {})
-            for entry in divs.values():
-                if entry.get("date", 0) >= cutoff:
-                    dividends_per_share += float(entry.get("amount", 0))
+                pass
+        divs = result.get("events", {}).get("dividends", {})
+        for entry in divs.values():
+            if entry.get("date", 0) >= cutoff:
+                dividends_per_share += float(entry.get("amount", 0))
 
         return current_price, dividends_per_share
     except Exception:
@@ -297,13 +302,11 @@ async def portfolio_performance(portfolio_id: str, user_id: str = Depends(requir
         raise HTTPException(status_code=404, detail="Portfolio not found.")
     holdings = score_db.get_holdings(portfolio_id)
 
-    # Fetch prices + dividends concurrently
-    async with httpx.AsyncClient() as client:
-        tasks = [
-            _fetch_price_and_dividends(client, h["ticker"], h.get("purchase_date"))
-            for h in holdings
-        ]
-        results = await asyncio.gather(*tasks)
+    # Fetch prices + dividends sequentially in a thread (proven pattern matching prices.py)
+    def fetch_all():
+        return [_fetch_price_and_dividends_sync(h["ticker"], h.get("purchase_date")) for h in holdings]
+
+    results = await to_thread.run_sync(fetch_all)
 
     portfolio_invested = 0.0
     portfolio_value = 0.0
