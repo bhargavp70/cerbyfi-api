@@ -1443,7 +1443,7 @@ loadHome();
 showHome();
 
 // ── Portfolios ────────────────────────────────────────────
-const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false };
+const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false, perfLoaded: false };
 
 async function loadPortfolios() {
   if (!auth.token) {
@@ -1511,6 +1511,7 @@ function openPortfolioDetail(id) {
   portfolioState.optimizeData = null;
   portfolioState.editing = false;
   portfolioState.perfTab = false;
+  portfolioState.perfLoaded = false;
   renderPortfolioDetail();
 }
 
@@ -1549,7 +1550,7 @@ function renderPortfolioDetail() {
     portfolioState.perfTab = false; portfolioState.editing = false; renderPortfolioDetail();
   });
   tabBar.querySelector("#ptab-perf").addEventListener("click", () => {
-    portfolioState.perfTab = true; portfolioState.editing = false; renderPortfolioDetail();
+    portfolioState.perfTab = true; portfolioState.editing = false; portfolioState.perfLoaded = false; renderPortfolioDetail();
   });
 
   if (portfolioState.perfTab) {
@@ -1759,8 +1760,9 @@ function renderPerformanceTab(p, container) {
     saveBtn.textContent = "Save & Calculate Return";
   });
 
-  // Auto-load if money data already exists
-  if (hasMoneyData) {
+  // Auto-load if money data already exists (only once per open, not on re-render)
+  if (hasMoneyData && !portfolioState.perfLoaded) {
+    portfolioState.perfLoaded = true;
     (async () => {
       resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;margin-top:8px;">Loading performance…</div>`;
       try {
@@ -1768,7 +1770,8 @@ function renderPerformanceTab(p, container) {
         if (res.ok) {
           const data = await res.json();
           renderPerfResults(data, resultsEl);
-          syncAllocationsFromPerf(p, p.holdings, data).then(() => loadPortfolios()).catch(() => {});
+          // Sync allocations silently — no loadPortfolios() to avoid re-render loop
+          syncAllocationsFromPerf(p, p.holdings, data).catch(() => {});
         } else {
           const err = await res.json().catch(() => ({}));
           resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Error: ${err.detail || res.status}</div>`;
