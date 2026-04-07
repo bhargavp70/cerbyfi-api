@@ -1744,6 +1744,8 @@ function renderPerformanceTab(p, container) {
       });
       if (res.ok) {
         const data = await res.json();
+        // Sync allocations to actual market weights
+        await syncAllocationsFromPerf(p, updated, data);
         await loadPortfolios();
         renderPerfResults(data, resultsEl);
       } else {
@@ -1763,10 +1765,47 @@ function renderPerformanceTab(p, container) {
       resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;margin-top:8px;">Loading…</div>`;
       try {
         const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/performance`, { headers: apiHeaders() });
-        if (res.ok) renderPerfResults(await res.json(), resultsEl);
+        if (res.ok) {
+          const data = await res.json();
+          await syncAllocationsFromPerf(p, p.holdings, data);
+          await loadPortfolios();
+          renderPerfResults(data, resultsEl);
+        }
       } catch { /* silent */ }
     })();
   }
+}
+
+async function syncAllocationsFromPerf(p, holdings, perfData) {
+  // Build ticker → current_value map from performance results
+  const valueMap = {};
+  let totalValue = 0;
+  perfData.holdings.forEach(h => {
+    if (h.current_value != null) {
+      valueMap[h.ticker] = h.current_value;
+      totalValue += h.current_value;
+    }
+  });
+  if (totalValue <= 0) return; // no prices available, skip
+
+  // Compute real-weight allocations, rounded to 1 decimal
+  const updated = holdings.map(h => ({
+    ...h,
+    allocation: valueMap[h.ticker] != null
+      ? parseFloat(((valueMap[h.ticker] / totalValue) * 100).toFixed(1))
+      : h.allocation,
+  }));
+
+  // Fix rounding drift so total = exactly 100
+  const sum = updated.reduce((s, h) => s + h.allocation, 0);
+  const drift = parseFloat((100 - sum).toFixed(1));
+  if (drift !== 0 && updated.length > 0) updated[0].allocation = parseFloat((updated[0].allocation + drift).toFixed(1));
+
+  await fetch(`${API_BASE}/api/me/portfolios/${p.id}/holdings`, {
+    method: "PUT",
+    headers: apiHeaders(true),
+    body: JSON.stringify({ holdings: updated }),
+  });
 }
 
 function renderPerfResults(data, el) {
