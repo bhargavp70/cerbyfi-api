@@ -199,8 +199,9 @@
           <button id="apply-optimize-btn" class="auth-submit" style="width:100%;padding:8px;margin-top:8px;">Apply Allocation</button>
         </div>
 
-        <div style="display:flex;gap:6px;margin-top:10px;">
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
           <button id="optimize-btn" class="wl-toggle-btn" style="flex:1;">Optimize</button>
+          <button id="optimize-risk-btn" class="wl-toggle-btn" style="flex:1;" title="Penalizes high-beta (volatile) stocks">Optimize + Risk</button>
           <button id="delete-portfolio-btn" class="wl-toggle-btn" style="flex:1;color:var(--red);">Delete</button>
         </div>
       </div>
@@ -351,6 +352,6 @@
 </div>
 
 <script src="/config.js"></script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

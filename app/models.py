@@ -84,6 +84,7 @@ class HoldingIn(BaseModel):
     shares: Optional[float] = None
     avg_cost: Optional[float] = None
     purchase_date: Optional[str] = None  # YYYY-MM-DD
+    max_alloc: Optional[float] = None    # hard cap for optimizer (0-100)
 
 
 class HoldingOut(BaseModel):
@@ -98,6 +99,7 @@ class HoldingOut(BaseModel):
     shares: Optional[float] = None
     avg_cost: Optional[float] = None
     purchase_date: Optional[str] = None
+    max_alloc: Optional[float] = None
 
 
 class HoldingsIn(BaseModel):
@@ -118,9 +120,14 @@ class OptimizedHolding(BaseModel):
     name: Optional[str]
     current_allocation: float
     optimized_allocation: float
+    top_category: Optional[str] = None      # category driving this holding's weight
+    top_category_pct: Optional[float] = None
+    risk_penalty: Optional[float] = None    # beta-based penalty applied (1.0 = none)
+    capped: Optional[bool] = None           # True if max_alloc was hit
 
 
 class OptimizeResponse(BaseModel):
     current_score: float
     optimized_score: float
+    risk_weighted: bool
     holdings: List[OptimizedHolding]

@@ -1443,7 +1443,7 @@ loadHome();
 showHome();
 
 // ── Portfolios ────────────────────────────────────────────
-const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false, perfLoaded: false };
+const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false, perfLoaded: false, lastOptimizeRisk: false };
 
 async function loadPortfolios() {
   if (!auth.token) {
@@ -1616,14 +1616,19 @@ function renderAllocationEditor(p) {
   p.holdings.forEach(h => {
     const row = document.createElement("div");
     row.className = "portfolio-holding-row";
+    row.style.cssText = "flex-wrap:wrap;gap:4px;";
     row.innerHTML = `
       <span class="ph-ticker">${h.ticker}</span>
-      <span class="ph-name">${escHtml(h.name || "")}</span>
-      <input type="number" class="alloc-input" min="1" max="99" step="1" value="${h.allocation.toFixed(0)}" data-ticker="${h.ticker}" />
-      <span style="font-size:0.78rem;color:var(--muted);">%</span>
+      <span class="ph-name" style="flex:1;">${escHtml(h.name || "")}</span>
+      <label style="display:flex;align-items:center;gap:3px;font-size:0.72rem;color:var(--muted);">
+        Alloc <input type="number" class="alloc-input" min="1" max="99" step="1" value="${h.allocation.toFixed(0)}" data-ticker="${h.ticker}" style="width:44px;" /> %
+      </label>
+      <label style="display:flex;align-items:center;gap:3px;font-size:0.72rem;color:var(--muted);" title="Max cap for optimizer">
+        Max <input type="number" class="alloc-input cap-input" min="1" max="99" step="1" placeholder="—" value="${h.max_alloc ? h.max_alloc.toFixed(0) : ''}" data-ticker="${h.ticker}" style="width:40px;" /> %
+      </label>
     `;
     holdingsEl.appendChild(row);
-    inputs[h.ticker] = row.querySelector("input");
+    inputs[h.ticker] = { alloc: row.querySelector('[data-ticker].alloc-input:not(.cap-input)'), cap: row.querySelector('.cap-input') };
   });
 
   // Sum hint
@@ -1633,11 +1638,11 @@ function renderAllocationEditor(p) {
   holdingsEl.appendChild(hint);
 
   const updateHint = () => {
-    const sum = Object.values(inputs).reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
+    const sum = Object.values(inputs).reduce((a, obj) => a + (parseFloat(obj.alloc.value) || 0), 0);
     hint.textContent = `Total: ${sum.toFixed(0)}% ${sum === 100 ? "✓" : "(must equal 100)"}`;
     hint.className = `alloc-sum-hint ${Math.abs(sum - 100) < 0.5 ? "alloc-sum-ok" : "alloc-sum-err"}`;
   };
-  Object.values(inputs).forEach(el => el.addEventListener("input", updateHint));
+  Object.values(inputs).forEach(obj => obj.alloc.addEventListener("input", updateHint));
   updateHint();
 
   // Save / Cancel
@@ -1654,7 +1659,7 @@ function renderAllocationEditor(p) {
     renderPortfolioDetail();
   });
   actions.querySelector("#save-alloc-btn").addEventListener("click", async () => {
-    const sum = Object.values(inputs).reduce((a, el) => a + (parseFloat(el.value) || 0), 0);
+    const sum = Object.values(inputs).reduce((a, obj) => a + (parseFloat(obj.alloc.value) || 0), 0);
     if (Math.abs(sum - 100) > 0.5) {
       hint.textContent = `Total must be 100. Currently ${sum.toFixed(1)}%.`;
       hint.className = "alloc-sum-hint alloc-sum-err";
@@ -1662,7 +1667,8 @@ function renderAllocationEditor(p) {
     }
     const updated = p.holdings.map(h => ({
       ...h,
-      allocation: parseFloat(inputs[h.ticker].value) || h.allocation,
+      allocation: parseFloat(inputs[h.ticker].alloc.value) || h.allocation,
+      max_alloc: parseFloat(inputs[h.ticker].cap.value) || null,
     }));
     await saveAllocations(p.id, updated);
   });
@@ -1944,36 +1950,79 @@ document.getElementById("delete-portfolio-btn").addEventListener("click", async 
   await loadPortfolios();
 });
 
-document.getElementById("optimize-btn").addEventListener("click", async () => {
+async function runOptimize(riskWeighted) {
   const panel = document.getElementById("optimize-panel");
-  if (panel.style.display !== "none") { panel.style.display = "none"; return; }
+  const btn = document.getElementById(riskWeighted ? "optimize-risk-btn" : "optimize-btn");
+  const otherBtn = document.getElementById(riskWeighted ? "optimize-btn" : "optimize-risk-btn");
 
-  const res = await fetch(`${API_BASE}/api/me/portfolios/${portfolioState.activeId}/optimize`, {
-    headers: apiHeaders(),
-  });
-  if (!res.ok) { alert((await res.json()).detail || "Could not optimize."); return; }
-  const data = await res.json();
-  portfolioState.optimizeData = data;
+  // Toggle off if already showing same mode
+  if (panel.style.display !== "none" && portfolioState.lastOptimizeRisk === riskWeighted) {
+    panel.style.display = "none"; return;
+  }
 
-  document.getElementById("opt-current-score").textContent = data.current_score.toFixed(1);
-  document.getElementById("opt-new-score").textContent     = data.optimized_score.toFixed(1);
+  btn.disabled = true;
+  btn.textContent = riskWeighted ? "Fetching betas…" : "Optimizing…";
+  otherBtn.disabled = true;
 
-  const rows = document.getElementById("optimize-rows");
-  rows.innerHTML = "";
-  data.holdings.forEach(h => {
-    const row = document.createElement("div");
-    row.className = "optimize-row";
-    row.innerHTML = `
-      <span class="opt-ticker">${h.ticker}</span>
-      <span class="ph-name" style="flex:1;">${escHtml(h.name || "")}</span>
-      <span class="opt-current">${h.current_allocation.toFixed(0)}%</span>
-      <span class="opt-arrow-sm">→</span>
-      <span class="opt-new">${h.optimized_allocation.toFixed(0)}%</span>
-    `;
-    rows.appendChild(row);
-  });
-  panel.style.display = "";
-});
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/me/portfolios/${portfolioState.activeId}/optimize?risk_weighted=${riskWeighted}`,
+      { headers: apiHeaders() }
+    );
+    if (!res.ok) { alert((await res.json()).detail || "Could not optimize."); return; }
+    const data = await res.json();
+    portfolioState.optimizeData = data;
+    portfolioState.lastOptimizeRisk = riskWeighted;
+
+    document.getElementById("opt-current-score").textContent = data.current_score.toFixed(1);
+    document.getElementById("opt-new-score").textContent     = data.optimized_score.toFixed(1);
+
+    const rows = document.getElementById("optimize-rows");
+    rows.innerHTML = "";
+
+    // Header label
+    const hdr = document.createElement("div");
+    hdr.style.cssText = "font-size:0.68rem;color:var(--muted);padding:4px 0 6px;text-transform:uppercase;letter-spacing:0.06em;";
+    hdr.textContent = riskWeighted ? "Risk-adjusted optimization (high-beta stocks penalised)" : "Category-complementarity optimization";
+    rows.appendChild(hdr);
+
+    data.holdings.forEach(h => {
+      const row = document.createElement("div");
+      row.className = "optimize-row";
+      row.style.cssText = "flex-direction:column;align-items:flex-start;gap:2px;padding:6px 0;";
+
+      const cappedTag = h.capped ? `<span style="font-size:0.65rem;color:var(--amber);margin-left:4px;" title="Max cap applied">⚠ capped</span>` : "";
+      const riskTag = (riskWeighted && h.risk_penalty != null && h.risk_penalty < 0.95)
+        ? `<span style="font-size:0.65rem;color:var(--red);margin-left:4px;" title="High beta — penalised">β↑</span>` : "";
+
+      let driverText = "";
+      if (h.top_category) {
+        driverText = `<div style="font-size:0.68rem;color:var(--muted);padding-left:2px;">Driver: <span style="color:var(--blue);">${h.top_category}</span> (${h.top_category_pct != null ? h.top_category_pct.toFixed(0)+'%' : '—'})</div>`;
+      }
+
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;width:100%;gap:4px;">
+          <span class="opt-ticker">${h.ticker}</span>
+          <span class="ph-name" style="flex:1;font-size:0.72rem;">${escHtml(h.name || "")}</span>
+          <span class="opt-current">${h.current_allocation.toFixed(0)}%</span>
+          <span class="opt-arrow-sm">→</span>
+          <span class="opt-new">${h.optimized_allocation.toFixed(0)}%</span>
+          ${cappedTag}${riskTag}
+        </div>
+        ${driverText}
+      `;
+      rows.appendChild(row);
+    });
+    panel.style.display = "";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = riskWeighted ? "Optimize + Risk" : "Optimize";
+    otherBtn.disabled = false;
+  }
+}
+
+document.getElementById("optimize-btn").addEventListener("click", () => runOptimize(false));
+document.getElementById("optimize-risk-btn").addEventListener("click", () => runOptimize(true));
 
 document.getElementById("apply-optimize-btn").addEventListener("click", async () => {
   const data = portfolioState.optimizeData;
