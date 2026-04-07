@@ -1,15 +1,18 @@
 """User registration, login, and profile endpoints."""
+import html as _html
 import re
 import secrets
 import time
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, field_validator
+from typing import Optional
 from app.db import score_db
 from app.config import settings
-from app.user_auth import hash_password, verify_password, create_token, require_user
+from app.user_auth import hash_password, verify_password, create_token, require_user, decode_token
 from app.email_utils import send_verification_email
+from app.main import limiter
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -57,9 +60,12 @@ class LoginIn(BaseModel):
 
 
 @router.post("/register")
-def register(body: RegisterIn):
+@limiter.limit("10/hour")
+def register(request: Request, body: RegisterIn):
     if score_db.get_user_by_email(body.email):
-        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+        # Don't reveal whether the email exists — prevents enumeration attacks
+        return {"token": None, "email_sent": True, "already_registered": True,
+                "user": None, "message": "If this email is not registered, you will receive a confirmation shortly."}
     user_id = str(uuid.uuid4())
     is_admin = body.email in settings.admin_email_set
     score_db.create_user(user_id, body.email, body.name, hash_password(body.password), is_admin=is_admin)
@@ -112,12 +118,26 @@ def _verify_page(title: str, msg: str, success: bool) -> str:
 
 
 @router.post("/login")
-def login(body: LoginIn):
+@limiter.limit("10/hour")
+def login(request: Request, body: LoginIn):
     user = score_db.get_user_by_email(body.email.strip().lower())
     if not user or not verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     token = create_token(user["id"])
     return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "is_admin": bool(user.get("is_admin")), "is_premium": bool(user.get("is_premium")), "can_refresh_ai": bool(user.get("can_refresh_ai"))}}
+
+
+@router.post("/logout")
+def logout(authorization: Optional[str] = Header(default=None)):
+    """Revoke the current JWT so it cannot be reused even if intercepted."""
+    if authorization and authorization.startswith("Bearer "):
+        result = decode_token(authorization[7:])
+        if result:
+            _, jti = result
+            score_db.revoke_token(jti)
+    # Also clean up expired verification tokens on logout (housekeeping)
+    score_db.purge_expired_verification_tokens()
+    return {"ok": True}
 
 
 @router.get("/me")

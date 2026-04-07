@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # JWT — set JWT_SECRET to a long random string in Railway
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"
-    jwt_expire_days: int = 30
+    jwt_expire_days: int = 1
 
     # Admins — comma-separated emails, overrideable via ADMIN_EMAILS env var
     admin_emails: str = "bhargavp@hotmail.com"

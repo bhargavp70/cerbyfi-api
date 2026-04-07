@@ -132,6 +132,13 @@ function renderAuthState() {
 }
 
 function signOut() {
+  // Revoke token server-side so it can't be reused even if intercepted
+  if (auth.token) {
+    fetch(`${API_BASE}/api/auth/logout`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${auth.token}` },
+    }).catch(() => {});
+  }
   auth.token = null;
   auth.user  = null;
   localStorage.removeItem(TOKEN_KEY);

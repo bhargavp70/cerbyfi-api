@@ -1,8 +1,16 @@
+import os
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pathlib import Path
+
+limiter = Limiter(key_func=get_remote_address)
+
+_IS_PROD = bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("JWT_SECRET"))
 
 from app.routers import stock, fund, analyze, user, watchlist_user, portfolio, admin, premium, prices, market
 from app.models import HealthResponse, CacheStatsResponse, TopResponse, TopItem, StatsResponse
@@ -17,9 +25,11 @@ app = FastAPI(
     title="CerbyFi API",
     description="Stock and ETF/Fund scoring API",
     version="1.0.0",
-    docs_url="/docs",
+    docs_url=None if _IS_PROD else "/docs",   # disable Swagger in production
     redoc_url=None,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.middleware("http")
@@ -32,6 +42,19 @@ async def force_https(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Add security headers to every response."""
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if _IS_PROD:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 # CORS — locked to known origins (set ALLOWED_ORIGINS in Railway env vars)
 _origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 
@@ -39,7 +62,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
 )
 
 # All /api/* routes require a valid X-API-Key header

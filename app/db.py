@@ -110,6 +110,12 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+    jti        TEXT PRIMARY KEY,
+    revoked_at REAL NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS feedback (
     id         TEXT PRIMARY KEY,
     user_id    TEXT,
@@ -614,6 +620,37 @@ class ScoreDB:
         with self._lock:
             self._conn.execute(
                 "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (key, value)
+            )
+            self._conn.commit()
+
+    # ── Token revocation ──────────────────────────────────────
+
+    def revoke_token(self, jti: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR IGNORE INTO revoked_tokens (jti, revoked_at) VALUES (?, ?)",
+                (jti, time.time())
+            )
+            # Purge revoked tokens older than 2 days (beyond any valid token lifetime)
+            self._conn.execute(
+                "DELETE FROM revoked_tokens WHERE revoked_at < ?",
+                (time.time() - 172800,)
+            )
+            self._conn.commit()
+
+    def is_token_revoked(self, jti: str) -> bool:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT 1 FROM revoked_tokens WHERE jti=?", (jti,)
+            ).fetchone()
+        return row is not None
+
+    # ── Expired token cleanup ─────────────────────────────────
+
+    def purge_expired_verification_tokens(self) -> None:
+        with self._lock:
+            self._conn.execute(
+                "DELETE FROM verification_tokens WHERE expires_at < ?", (time.time(),)
             )
             self._conn.commit()
 

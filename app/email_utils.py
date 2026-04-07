@@ -1,4 +1,5 @@
 """SMTP email sender. Configure via environment variables in Railway."""
+import html as _html
 import smtplib
 import logging
 from email.mime.multipart import MIMEMultipart
@@ -14,6 +15,8 @@ def send_verification_email(to_email: str, name: str, verify_url: str) -> bool:
         logger.warning("SMTP not configured — skipping verification email.")
         return False
 
+    safe_name = _html.escape(name)
+    safe_url  = _html.escape(verify_url)
     html = f"""
     <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0a0a14;color:#f0f0fa;">
       <div style="margin-bottom:24px;">
@@ -21,18 +24,18 @@ def send_verification_email(to_email: str, name: str, verify_url: str) -> bool:
       </div>
       <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:12px;">Verify your email address</h2>
       <p style="color:#9999bb;line-height:1.6;margin-bottom:28px;">
-        Hi {name},<br><br>
+        Hi {safe_name},<br><br>
         Thanks for creating a CerbyFi account. Click the button below to verify your
         email address. This link expires in <strong style="color:#f0f0fa;">24 hours</strong>.
       </p>
-      <a href="{verify_url}"
+      <a href="{safe_url}"
          style="display:inline-block;padding:12px 28px;background:#4f8ef7;color:#fff;
                 border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">
         Verify Email Address
       </a>
       <p style="margin-top:28px;font-size:0.8rem;color:#5a5a80;">
         If you didn't create this account you can ignore this email.<br>
-        Or copy this link: <a href="{verify_url}" style="color:#4f8ef7;">{verify_url}</a>
+        Or copy this link: <a href="{safe_url}" style="color:#4f8ef7;">{safe_url}</a>
       </p>
     </div>
     """
