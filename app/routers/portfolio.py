@@ -324,12 +324,25 @@ async def optimize_portfolio(
 def _fetch_risk_metrics_sync(ticker: str) -> dict:
     """Fetch beta, volatility, max drawdown, 52w range from Yahoo Finance."""
     try:
-        r = _requests.get(
-            f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
-            params={"interval": "1d", "range": "1y"},
-            headers=_YAHOO_HEADERS,
-            timeout=12,
-        )
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        # Try query1 first, fall back to query2
+        for host in ("query1", "query2"):
+            r = _requests.get(
+                f"https://{host}.finance.yahoo.com/v8/finance/chart/{ticker}",
+                params={"interval": "1d", "range": "1y"},
+                headers=headers,
+                timeout=12,
+            )
+            if r.status_code == 200:
+                try:
+                    r.json()
+                    break
+                except Exception:
+                    continue
         data = r.json()
         result = data.get("chart", {}).get("result", [{}])[0]
         meta   = result.get("meta", {})
@@ -384,8 +397,8 @@ def _fetch_risk_metrics_sync(ticker: str) -> dict:
             "return_1y": one_year_return,
             "current_price": round(float(current_price), 2) if current_price else None,
         }
-    except Exception:
-        return {"ticker": ticker, "error": True}
+    except Exception as e:
+        return {"ticker": ticker, "error": True, "error_msg": str(e)}
 
 
 @router.get("/{portfolio_id}/risk")

@@ -1809,7 +1809,11 @@ function renderRiskTab(p, container) {
   (async () => {
     try {
       const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/risk`, { headers: apiHeaders() });
-      if (!res.ok) { wrap.innerHTML = `<div style="color:var(--red);font-size:0.82rem;">Failed to load risk data.</div>`; return; }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        wrap.innerHTML = `<div style="color:var(--red);font-size:0.82rem;">Failed to load risk data: ${err.detail || res.status}</div>`;
+        return;
+      }
       const data = await res.json();
 
       const riskColor = (beta) => {
@@ -1853,7 +1857,7 @@ function renderRiskTab(p, container) {
 
       data.holdings.forEach(h => {
         if (h.error) {
-          html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.78rem;color:var(--muted);">${h.ticker} — data unavailable</div>`;
+          html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.78rem;color:var(--muted);">${h.ticker} — data unavailable${h.error_msg ? ': ' + h.error_msg : ''}</div>`;
           return;
         }
         const returnColor = h.return_1y == null ? "var(--muted)" : h.return_1y >= 0 ? "var(--green)" : "var(--red)";
