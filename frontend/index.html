@@ -183,6 +183,11 @@
 
         <button id="portfolio-add-current-btn" class="auth-link" style="display:none;width:100%;margin:8px 0;font-size:0.8rem;"></button>
 
+        <div id="portfolio-add-manual" style="display:flex;gap:6px;margin:8px 0;">
+          <input id="portfolio-manual-ticker" type="text" placeholder="Add ticker (e.g. AAPL)" style="flex:1;padding:7px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none;text-transform:uppercase;" maxlength="10" />
+          <button id="portfolio-manual-add-btn" class="wl-toggle-btn" style="flex-shrink:0;padding:7px 12px;">+ Add</button>
+        </div>
+
         <div id="optimize-panel" style="display:none;">
           <div class="optimize-score-compare">
             <div class="opt-score-box">
@@ -352,6 +357,6 @@
 </div>
 
 <script src="/config.js"></script>
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>

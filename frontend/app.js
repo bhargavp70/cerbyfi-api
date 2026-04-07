@@ -1472,6 +1472,7 @@ function renderPortfolioSection() {
 function renderPortfolioList() {
   document.getElementById("portfolio-list").style.display = "";
   document.getElementById("portfolio-detail").style.display = "none";
+  document.getElementById("portfolio-add-manual").style.display = "none";
   const list = document.getElementById("portfolio-list");
   list.innerHTML = "";
   if (!portfolioState.list.length) {
@@ -1518,6 +1519,7 @@ function openPortfolioDetail(id) {
 function renderPortfolioDetail() {
   document.getElementById("portfolio-list").style.display = "none";
   document.getElementById("portfolio-detail").style.display = "";
+  document.getElementById("portfolio-add-manual").style.display = "flex";
   document.getElementById("optimize-panel").style.display = "none";
 
   const p = portfolioState.list.find(x => x.id === portfolioState.activeId);
@@ -1919,6 +1921,54 @@ async function addCurrentToPortfolio(portfolioId) {
   portfolioState.editing = true;
   renderPortfolioDetail();
 }
+
+// ── Manual add ticker to portfolio ───────────────────────
+document.getElementById("portfolio-manual-ticker").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("portfolio-manual-add-btn").click();
+});
+document.getElementById("portfolio-manual-ticker").addEventListener("input", e => {
+  e.target.value = e.target.value.toUpperCase();
+});
+
+document.getElementById("portfolio-manual-add-btn").addEventListener("click", async () => {
+  const input = document.getElementById("portfolio-manual-ticker");
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+
+  const p = portfolioState.list.find(x => x.id === portfolioState.activeId);
+  if (!p) return;
+  if (p.holdings.find(h => h.ticker === ticker)) {
+    input.value = "";
+    return; // already in portfolio
+  }
+
+  const btn = document.getElementById("portfolio-manual-add-btn");
+  btn.disabled = true;
+  btn.textContent = "…";
+
+  // Try to get score data from cache (no-spin analyze call)
+  let newHolding = { ticker, mode: "stock", name: null, score: null, max_score: null, pct_score: null, stars: null, allocation: 0 };
+  try {
+    const res = await fetch(`${API_BASE}/api/analyze/${ticker}`, { headers: apiHeaders() });
+    if (res.ok) {
+      const d = await res.json();
+      newHolding = { ticker: d.ticker, mode: d.type, name: d.name, score: d.total, max_score: d.max_total, pct_score: d.pct, stars: d.stars, allocation: 0 };
+    }
+  } catch { /* use bare holding if offline */ }
+
+  // Distribute allocation evenly
+  const n = p.holdings.length + 1;
+  const evenAlloc = parseFloat((100 / n).toFixed(1));
+  const updatedHoldings = [...p.holdings, newHolding].map((h, i, arr) => ({
+    ...h,
+    allocation: i < arr.length - 1 ? evenAlloc : parseFloat((100 - evenAlloc * (arr.length - 1)).toFixed(1)),
+  }));
+
+  await saveAllocations(p.id, updatedHoldings);
+  input.value = "";
+  btn.disabled = false;
+  btn.textContent = "+ Add";
+});
 
 document.getElementById("new-portfolio-btn").addEventListener("click", async () => {
   const name = prompt("Portfolio name:");
