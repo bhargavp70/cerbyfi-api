@@ -81,6 +81,9 @@ class HoldingIn(BaseModel):
     pct_score: Optional[float] = None
     stars: Optional[int] = None
     allocation: float  # 0.0 – 100.0
+    shares: Optional[float] = None
+    avg_cost: Optional[float] = None
+    purchase_date: Optional[str] = None  # YYYY-MM-DD
 
 
 class HoldingOut(BaseModel):
@@ -92,6 +95,9 @@ class HoldingOut(BaseModel):
     pct_score: Optional[float]
     stars: Optional[int]
     allocation: float
+    shares: Optional[float] = None
+    avg_cost: Optional[float] = None
+    purchase_date: Optional[str] = None
 
 
 class HoldingsIn(BaseModel):

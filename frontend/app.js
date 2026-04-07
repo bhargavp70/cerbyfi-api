@@ -1443,7 +1443,7 @@ loadHome();
 showHome();
 
 // ── Portfolios ────────────────────────────────────────────
-const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false };
+const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false };
 
 async function loadPortfolios() {
   if (!auth.token) {
@@ -1510,6 +1510,7 @@ function openPortfolioDetail(id) {
   portfolioState.activeId = id;
   portfolioState.optimizeData = null;
   portfolioState.editing = false;
+  portfolioState.perfTab = false;
   renderPortfolioDetail();
 }
 
@@ -1536,7 +1537,24 @@ function renderPortfolioDetail() {
     holdingsEl.innerHTML = `<div style="font-size:0.8rem;color:var(--muted);padding:8px 0;">No holdings. Analyze a stock/ETF then click "+ Add to Portfolio".</div>`;
   }
 
-  if (portfolioState.editing) {
+  // Tab bar
+  const tabBar = document.createElement("div");
+  tabBar.style.cssText = "display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px;";
+  tabBar.innerHTML = `
+    <button class="modal-tab ${!portfolioState.perfTab ? 'active' : ''}" id="ptab-holdings">Holdings</button>
+    <button class="modal-tab ${portfolioState.perfTab ? 'active' : ''}" id="ptab-perf">Performance</button>
+  `;
+  holdingsEl.appendChild(tabBar);
+  tabBar.querySelector("#ptab-holdings").addEventListener("click", () => {
+    portfolioState.perfTab = false; portfolioState.editing = false; renderPortfolioDetail();
+  });
+  tabBar.querySelector("#ptab-perf").addEventListener("click", () => {
+    portfolioState.perfTab = true; portfolioState.editing = false; renderPortfolioDetail();
+  });
+
+  if (portfolioState.perfTab) {
+    renderPerformanceTab(p, holdingsEl);
+  } else if (portfolioState.editing) {
     renderAllocationEditor(p);
   } else {
     p.holdings.forEach(h => {
@@ -1563,7 +1581,6 @@ function renderPortfolioDetail() {
     });
 
     if (p.holdings.length > 1) {
-      // Edit allocations button row
       const editRow = document.createElement("div");
       editRow.style.cssText = "margin-top:8px;";
       editRow.innerHTML = `<button class="wl-toggle-btn" id="edit-alloc-btn" style="width:100%;font-size:0.8rem;">Edit allocations</button>`;
@@ -1644,6 +1661,153 @@ function renderAllocationEditor(p) {
     }));
     await saveAllocations(p.id, updated);
   });
+}
+
+function renderPerformanceTab(p, container) {
+  // Money input form
+  const formWrap = document.createElement("div");
+  formWrap.style.cssText = "margin-bottom:10px;";
+
+  const hasMoneyData = p.holdings.some(h => h.shares && h.avg_cost);
+
+  if (!hasMoneyData) {
+    formWrap.innerHTML = `<div style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">Enter your purchase details below to see total return including dividends.</div>`;
+  }
+
+  // Per-holding money inputs
+  const inputs = {};
+  p.holdings.forEach(h => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;flex-direction:column;gap:4px;padding:8px 0;border-bottom:1px solid var(--border);";
+    row.innerHTML = `
+      <div style="font-size:0.82rem;font-weight:700;color:var(--text);">${h.ticker} <span style="font-weight:400;color:var(--muted);">${escHtml(h.name || "")}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:0.72rem;color:var(--muted);flex:1;min-width:60px;">
+          Shares
+          <input type="number" class="alloc-input" style="width:100%;" placeholder="e.g. 10" step="any" value="${h.shares || ''}" data-field="shares" data-ticker="${h.ticker}" />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:0.72rem;color:var(--muted);flex:1;min-width:70px;">
+          Avg Cost ($)
+          <input type="number" class="alloc-input" style="width:100%;" placeholder="e.g. 150.00" step="any" value="${h.avg_cost || ''}" data-field="avg_cost" data-ticker="${h.ticker}" />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:0.72rem;color:var(--muted);flex:1;min-width:100px;">
+          Purchase Date
+          <input type="date" class="alloc-input" style="width:100%;color:var(--text);background:var(--surface);" value="${h.purchase_date || ''}" data-field="purchase_date" data-ticker="${h.ticker}" />
+        </label>
+      </div>
+    `;
+    formWrap.appendChild(row);
+    inputs[h.ticker] = {
+      shares: row.querySelector('[data-field="shares"]'),
+      avg_cost: row.querySelector('[data-field="avg_cost"]'),
+      purchase_date: row.querySelector('[data-field="purchase_date"]'),
+    };
+  });
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "auth-submit";
+  saveBtn.style.cssText = "margin-top:10px;padding:8px;font-size:0.82rem;width:100%;";
+  saveBtn.textContent = "Save & Calculate Return";
+  formWrap.appendChild(saveBtn);
+
+  container.appendChild(formWrap);
+
+  // Results area
+  const resultsEl = document.createElement("div");
+  resultsEl.id = "perf-results";
+  container.appendChild(resultsEl);
+
+  saveBtn.addEventListener("click", async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+
+    // Save each holding's money data
+    const updated = p.holdings.map(h => ({
+      ...h,
+      shares: parseFloat(inputs[h.ticker].shares.value) || null,
+      avg_cost: parseFloat(inputs[h.ticker].avg_cost.value) || null,
+      purchase_date: inputs[h.ticker].purchase_date.value || null,
+    }));
+
+    await fetch(`${API_BASE}/api/me/portfolios/${p.id}/holdings`, {
+      method: "PUT",
+      headers: apiHeaders(true),
+      body: JSON.stringify({ holdings: updated }),
+    });
+
+    saveBtn.textContent = "Loading performance…";
+
+    // Fetch performance
+    try {
+      const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/performance`, {
+        headers: apiHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await loadPortfolios();
+        renderPerfResults(data, resultsEl);
+      } else {
+        resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Failed to load performance data.</div>`;
+      }
+    } catch {
+      resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Network error.</div>`;
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save & Calculate Return";
+  });
+
+  // Auto-load if money data already exists
+  if (hasMoneyData) {
+    (async () => {
+      resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;margin-top:8px;">Loading…</div>`;
+      try {
+        const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/performance`, { headers: apiHeaders() });
+        if (res.ok) renderPerfResults(await res.json(), resultsEl);
+      } catch { /* silent */ }
+    })();
+  }
+}
+
+function renderPerfResults(data, el) {
+  const fmt$ = v => v != null ? `$${v.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2})}` : "—";
+  const fmtPct = v => v != null ? `${v >= 0 ? "+" : ""}${v.toFixed(2)}%` : "—";
+  const color = v => v == null ? "var(--muted)" : v >= 0 ? "var(--green)" : "var(--red)";
+
+  let html = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0 8px;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:10px;">Portfolio Total</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:0.72rem;color:var(--muted);">Invested</div><div style="font-size:1rem;font-weight:700;">${fmt$(data.total_invested)}</div></div>
+        <div><div style="font-size:0.72rem;color:var(--muted);">Current Value</div><div style="font-size:1rem;font-weight:700;">${fmt$(data.total_current_value)}</div></div>
+        <div><div style="font-size:0.72rem;color:var(--muted);">Dividends</div><div style="font-size:1rem;font-weight:700;color:var(--green);">${fmt$(data.total_dividends)}</div></div>
+        <div><div style="font-size:0.72rem;color:var(--muted);">Total Return</div>
+          <div style="font-size:1rem;font-weight:700;color:${color(data.total_return)};">${fmt$(data.total_return)} <span style="font-size:0.82rem;">(${fmtPct(data.total_return_pct)})</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  data.holdings.forEach(h => {
+    if (!h.invested) return;
+    html += `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-weight:700;color:var(--text);">${h.ticker}</span>
+          <span style="color:${color(h.total_return)};font-weight:700;">${fmt$(h.total_return)} <span style="font-size:0.72rem;">(${fmtPct(h.total_return_pct)})</span></span>
+        </div>
+        <div style="display:flex;gap:12px;color:var(--muted);flex-wrap:wrap;">
+          <span>${h.shares} shares @ ${fmt$(h.avg_cost)}</span>
+          <span>Invested: ${fmt$(h.invested)}</span>
+          <span>Now: ${fmt$(h.current_value)}</span>
+          ${h.dividends_received ? `<span style="color:var(--green);">Div: +${fmt$(h.dividends_received)}</span>` : ""}
+          <span>Price gain: <span style="color:${color(h.price_gain)};">${fmtPct(h.price_gain_pct)}</span></span>
+        </div>
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
 }
 
 async function saveAllocations(portfolioId, holdings) {

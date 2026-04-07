@@ -1,5 +1,9 @@
 """Portfolio management: create, manage holdings, optimize allocations."""
 import uuid
+import time
+import asyncio
+import httpx
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from app.db import score_db
@@ -238,7 +242,6 @@ def optimize_portfolio(portfolio_id: str, user_id: str = Depends(require_user)):
 
     current_score = _aggregate_score(holdings) or 0.0
     optimized = _optimize(holdings)
-    # Compute optimized aggregate score using new allocations
     for h in optimized:
         h["allocation"] = h["optimized_allocation"]
     optimized_score = _aggregate_score(optimized) or 0.0
@@ -256,3 +259,100 @@ def optimize_portfolio(portfolio_id: str, user_id: str = Depends(require_user)):
             for h, h_orig in zip(optimized, holdings)
         ],
     )
+
+
+# ── Performance (money tracking) ──────────────────────────
+
+async def _fetch_price_and_dividends(client: httpx.AsyncClient, ticker: str, purchase_date: Optional[str]):
+    """Fetch current price and dividends-since-purchase from Yahoo Finance."""
+    headers = {"User-Agent": "Mozilla/5.0"}
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=10y&events=dividends"
+    try:
+        r = await client.get(url, headers=headers, timeout=10.0)
+        data = r.json()
+        result = data.get("chart", {}).get("result", [{}])[0]
+        meta = result.get("meta", {})
+        current_price = meta.get("regularMarketPrice") or meta.get("previousClose")
+
+        dividends_per_share = 0.0
+        if purchase_date:
+            try:
+                cutoff = datetime.strptime(purchase_date, "%Y-%m-%d").timestamp()
+            except Exception:
+                cutoff = 0.0
+            divs = result.get("events", {}).get("dividends", {})
+            for entry in divs.values():
+                if entry.get("date", 0) >= cutoff:
+                    dividends_per_share += float(entry.get("amount", 0))
+
+        return current_price, dividends_per_share
+    except Exception:
+        return None, 0.0
+
+
+@router.get("/{portfolio_id}/performance")
+async def portfolio_performance(portfolio_id: str, user_id: str = Depends(require_user)):
+    p = score_db.get_portfolio(portfolio_id, user_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found.")
+    holdings = score_db.get_holdings(portfolio_id)
+
+    # Fetch prices + dividends concurrently
+    async with httpx.AsyncClient() as client:
+        tasks = [
+            _fetch_price_and_dividends(client, h["ticker"], h.get("purchase_date"))
+            for h in holdings
+        ]
+        results = await asyncio.gather(*tasks)
+
+    portfolio_invested = 0.0
+    portfolio_value = 0.0
+    portfolio_dividends = 0.0
+    holding_perf = []
+
+    for h, (current_price, div_per_share) in zip(holdings, results):
+        shares = h.get("shares") or 0.0
+        avg_cost = h.get("avg_cost") or 0.0
+        has_money = shares > 0 and avg_cost > 0
+
+        invested = shares * avg_cost if has_money else None
+        current_value = (shares * current_price) if (has_money and current_price) else None
+        dividends_received = (shares * div_per_share) if has_money else None
+        price_gain = (current_value - invested) if (current_value is not None and invested is not None) else None
+        total_return = ((price_gain or 0) + (dividends_received or 0)) if (price_gain is not None) else None
+        price_gain_pct = ((price_gain / invested) * 100) if (price_gain is not None and invested) else None
+        total_return_pct = ((total_return / invested) * 100) if (total_return is not None and invested) else None
+
+        if invested: portfolio_invested += invested
+        if current_value: portfolio_value += current_value
+        if dividends_received: portfolio_dividends += dividends_received
+
+        holding_perf.append({
+            "ticker": h["ticker"],
+            "name": h.get("name"),
+            "shares": shares if has_money else None,
+            "avg_cost": avg_cost if has_money else None,
+            "purchase_date": h.get("purchase_date"),
+            "current_price": round(current_price, 4) if current_price else None,
+            "invested": round(invested, 2) if invested else None,
+            "current_value": round(current_value, 2) if current_value else None,
+            "price_gain": round(price_gain, 2) if price_gain is not None else None,
+            "price_gain_pct": round(price_gain_pct, 2) if price_gain_pct is not None else None,
+            "dividends_received": round(dividends_received, 2) if dividends_received else None,
+            "total_return": round(total_return, 2) if total_return is not None else None,
+            "total_return_pct": round(total_return_pct, 2) if total_return_pct is not None else None,
+        })
+
+    total_gain = portfolio_value - portfolio_invested if portfolio_invested else None
+    total_return_all = (total_gain + portfolio_dividends) if total_gain is not None else None
+    total_return_pct_all = ((total_return_all / portfolio_invested) * 100) if (total_return_all is not None and portfolio_invested) else None
+
+    return {
+        "portfolio_id": portfolio_id,
+        "total_invested": round(portfolio_invested, 2) if portfolio_invested else None,
+        "total_current_value": round(portfolio_value, 2) if portfolio_value else None,
+        "total_dividends": round(portfolio_dividends, 2) if portfolio_dividends else None,
+        "total_return": round(total_return_all, 2) if total_return_all is not None else None,
+        "total_return_pct": round(total_return_pct_all, 2) if total_return_pct_all is not None else None,
+        "holdings": holding_perf,
+    }

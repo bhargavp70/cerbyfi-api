@@ -135,6 +135,9 @@ class ScoreDB:
                 "ALTER TABLE users ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN can_refresh_ai INTEGER NOT NULL DEFAULT 0",
                 "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE portfolio_holdings ADD COLUMN shares REAL",
+                "ALTER TABLE portfolio_holdings ADD COLUMN avg_cost REAL",
+                "ALTER TABLE portfolio_holdings ADD COLUMN purchase_date TEXT",
             ]:
                 try:
                     self._conn.execute(col_sql)
@@ -425,7 +428,8 @@ class ScoreDB:
     def get_holdings(self, portfolio_id: str) -> list:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at "
+                "SELECT ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at, "
+                "shares, avg_cost, purchase_date "
                 "FROM portfolio_holdings WHERE portfolio_id=? ORDER BY added_at ASC",
                 (portfolio_id,),
             ).fetchall()
@@ -439,12 +443,14 @@ class ScoreDB:
             )
             self._conn.executemany(
                 "INSERT INTO portfolio_holdings "
-                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at, "
+                "shares, avg_cost, purchase_date) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [
                     (portfolio_id, h["ticker"], h["mode"], h.get("name"),
                      h.get("score"), h.get("max_score"), h.get("pct_score"),
-                     h.get("stars"), h["allocation"], now)
+                     h.get("stars"), h["allocation"], now,
+                     h.get("shares"), h.get("avg_cost"), h.get("purchase_date"))
                     for h in holdings
                 ],
             )
@@ -458,11 +464,13 @@ class ScoreDB:
         with self._lock:
             self._conn.execute(
                 "INSERT OR REPLACE INTO portfolio_holdings "
-                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "(portfolio_id, ticker, mode, name, score, max_score, pct_score, stars, allocation, added_at, "
+                "shares, avg_cost, purchase_date) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (portfolio_id, holding["ticker"], holding["mode"], holding.get("name"),
                  holding.get("score"), holding.get("max_score"), holding.get("pct_score"),
-                 holding.get("stars"), holding["allocation"], now),
+                 holding.get("stars"), holding["allocation"], now,
+                 holding.get("shares"), holding.get("avg_cost"), holding.get("purchase_date")),
             )
             self._conn.execute(
                 "UPDATE portfolios SET updated_at=? WHERE id=?", (now, portfolio_id)
