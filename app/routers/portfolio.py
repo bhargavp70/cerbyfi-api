@@ -1,5 +1,6 @@
 """Portfolio management: create, manage holdings, optimize allocations."""
 import uuid
+import math
 import requests as _requests
 from datetime import datetime
 from typing import List, Optional
@@ -316,6 +317,111 @@ async def optimize_portfolio(
             for h, h_orig in zip(optimized, holdings)
         ],
     )
+
+
+# ── Risk metrics ──────────────────────────────────────────
+
+def _fetch_risk_metrics_sync(ticker: str) -> dict:
+    """Fetch beta, volatility, max drawdown, 52w range from Yahoo Finance."""
+    try:
+        r = _requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
+            params={"interval": "1d", "range": "1y"},
+            headers=_YAHOO_HEADERS,
+            timeout=12,
+        )
+        data = r.json()
+        result = data.get("chart", {}).get("result", [{}])[0]
+        meta   = result.get("meta", {})
+        closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        closes = [c for c in closes if c is not None]
+
+        current_price = meta.get("regularMarketPrice") or (closes[-1] if closes else None)
+        beta          = meta.get("beta")
+        week52_high   = meta.get("fiftyTwoWeekHigh")
+        week52_low    = meta.get("fiftyTwoWeekLow")
+
+        # Annualised volatility from daily log returns
+        volatility = None
+        if len(closes) >= 10:
+            log_returns = [math.log(closes[i] / closes[i-1]) for i in range(1, len(closes)) if closes[i-1] > 0]
+            if log_returns:
+                mean = sum(log_returns) / len(log_returns)
+                variance = sum((r - mean) ** 2 for r in log_returns) / len(log_returns)
+                volatility = round(math.sqrt(variance) * math.sqrt(252) * 100, 1)  # annualised %
+
+        # Max drawdown over the year
+        max_drawdown = None
+        if len(closes) >= 2:
+            peak = closes[0]
+            max_dd = 0.0
+            for c in closes:
+                if c > peak:
+                    peak = c
+                dd = (peak - c) / peak
+                if dd > max_dd:
+                    max_dd = dd
+            max_drawdown = round(max_dd * 100, 1)
+
+        # % from 52w high
+        pct_from_high = None
+        if current_price and week52_high:
+            pct_from_high = round((current_price - week52_high) / week52_high * 100, 1)
+
+        # 1-year return
+        one_year_return = None
+        if len(closes) >= 2 and closes[0] > 0:
+            one_year_return = round((closes[-1] / closes[0] - 1) * 100, 1)
+
+        return {
+            "ticker": ticker,
+            "beta": round(float(beta), 2) if beta else None,
+            "volatility_1y": volatility,
+            "max_drawdown_1y": max_drawdown,
+            "week52_high": round(float(week52_high), 2) if week52_high else None,
+            "week52_low":  round(float(week52_low),  2) if week52_low  else None,
+            "pct_from_52w_high": pct_from_high,
+            "return_1y": one_year_return,
+            "current_price": round(float(current_price), 2) if current_price else None,
+        }
+    except Exception:
+        return {"ticker": ticker, "error": True}
+
+
+@router.get("/{portfolio_id}/risk")
+async def portfolio_risk(portfolio_id: str, user_id: str = Depends(require_user)):
+    p = score_db.get_portfolio(portfolio_id, user_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Portfolio not found.")
+    holdings = score_db.get_holdings(portfolio_id)
+    if not holdings:
+        return {"holdings": []}
+
+    def fetch_all():
+        return [_fetch_risk_metrics_sync(h["ticker"]) for h in holdings]
+
+    metrics = await to_thread.run_sync(fetch_all)
+
+    # Portfolio-level weighted beta and volatility
+    total_alloc = sum(h["allocation"] for h in holdings) or 100.0
+    w_beta = None
+    w_vol  = None
+    beta_sum = vol_sum = 0.0
+    beta_w = vol_w = 0.0
+    for h, m in zip(holdings, metrics):
+        w = h["allocation"] / total_alloc
+        if m.get("beta"):
+            beta_sum += m["beta"] * w; beta_w += w
+        if m.get("volatility_1y"):
+            vol_sum  += m["volatility_1y"] * w; vol_w += w
+    if beta_w: w_beta = round(beta_sum / beta_w, 2)
+    if vol_w:  w_vol  = round(vol_sum  / vol_w,  1)
+
+    return {
+        "portfolio_beta": w_beta,
+        "portfolio_volatility": w_vol,
+        "holdings": metrics,
+    }
 
 
 # ── Performance (money tracking) ──────────────────────────

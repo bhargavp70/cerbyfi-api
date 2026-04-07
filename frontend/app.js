@@ -1443,7 +1443,7 @@ loadHome();
 showHome();
 
 // ── Portfolios ────────────────────────────────────────────
-const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, perfTab: false, perfLoaded: false, lastOptimizeRisk: false };
+const portfolioState = { list: [], activeId: null, optimizeData: null, editing: false, activeTab: "holdings", perfLoaded: false, lastOptimizeRisk: false };
 
 async function loadPortfolios() {
   if (!auth.token) {
@@ -1511,7 +1511,7 @@ function openPortfolioDetail(id) {
   portfolioState.activeId = id;
   portfolioState.optimizeData = null;
   portfolioState.editing = false;
-  portfolioState.perfTab = false;
+  portfolioState.activeTab = "holdings";
   portfolioState.perfLoaded = false;
   renderPortfolioDetail();
 }
@@ -1544,18 +1544,24 @@ function renderPortfolioDetail() {
   const tabBar = document.createElement("div");
   tabBar.style.cssText = "display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:10px;";
   tabBar.innerHTML = `
-    <button class="modal-tab ${!portfolioState.perfTab ? 'active' : ''}" id="ptab-holdings">Holdings</button>
-    <button class="modal-tab ${portfolioState.perfTab ? 'active' : ''}" id="ptab-perf">Performance</button>
+    <button class="modal-tab ${portfolioState.activeTab === 'holdings' ? 'active' : ''}" id="ptab-holdings">Holdings</button>
+    <button class="modal-tab ${portfolioState.activeTab === 'perf' ? 'active' : ''}" id="ptab-perf">Performance</button>
+    <button class="modal-tab ${portfolioState.activeTab === 'risk' ? 'active' : ''}" id="ptab-risk">Risk</button>
   `;
   holdingsEl.appendChild(tabBar);
   tabBar.querySelector("#ptab-holdings").addEventListener("click", () => {
-    portfolioState.perfTab = false; portfolioState.editing = false; renderPortfolioDetail();
+    portfolioState.activeTab = "holdings"; portfolioState.editing = false; renderPortfolioDetail();
   });
   tabBar.querySelector("#ptab-perf").addEventListener("click", () => {
-    portfolioState.perfTab = true; portfolioState.editing = false; portfolioState.perfLoaded = false; renderPortfolioDetail();
+    portfolioState.activeTab = "perf"; portfolioState.editing = false; portfolioState.perfLoaded = false; renderPortfolioDetail();
+  });
+  tabBar.querySelector("#ptab-risk").addEventListener("click", () => {
+    portfolioState.activeTab = "risk"; portfolioState.editing = false; renderPortfolioDetail();
   });
 
-  if (portfolioState.perfTab) {
+  if (portfolioState.activeTab === "risk") {
+    renderRiskTab(p, holdingsEl);
+  } else if (portfolioState.activeTab === "perf") {
     renderPerformanceTab(p, holdingsEl);
   } else if (portfolioState.editing) {
     renderAllocationEditor(p);
@@ -1793,6 +1799,108 @@ function renderPerformanceTab(p, container) {
       }
     })();
   }
+}
+
+function renderRiskTab(p, container) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;padding:8px 0;">Fetching risk metrics…</div>`;
+  container.appendChild(wrap);
+
+  (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/risk`, { headers: apiHeaders() });
+      if (!res.ok) { wrap.innerHTML = `<div style="color:var(--red);font-size:0.82rem;">Failed to load risk data.</div>`; return; }
+      const data = await res.json();
+
+      const riskColor = (beta) => {
+        if (beta == null) return "var(--muted)";
+        if (beta < 0.8)  return "var(--green)";
+        if (beta < 1.2)  return "var(--text)";
+        if (beta < 1.8)  return "var(--amber)";
+        return "var(--red)";
+      };
+      const volColor = (v) => {
+        if (v == null) return "var(--muted)";
+        if (v < 20)  return "var(--green)";
+        if (v < 35)  return "var(--text)";
+        if (v < 50)  return "var(--amber)";
+        return "var(--red)";
+      };
+      const ddColor = (d) => {
+        if (d == null) return "var(--muted)";
+        if (d < 10)  return "var(--green)";
+        if (d < 20)  return "var(--text)";
+        if (d < 35)  return "var(--amber)";
+        return "var(--red)";
+      };
+
+      let html = "";
+
+      // Portfolio summary
+      if (data.portfolio_beta != null || data.portfolio_volatility != null) {
+        html += `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;">Portfolio (Weighted)</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+              ${data.portfolio_beta != null ? `<div><div style="font-size:0.68rem;color:var(--muted);">Weighted Beta</div><div style="font-size:1.1rem;font-weight:700;color:${riskColor(data.portfolio_beta)};">${data.portfolio_beta}</div></div>` : ""}
+              ${data.portfolio_volatility != null ? `<div><div style="font-size:0.68rem;color:var(--muted);">Avg Volatility</div><div style="font-size:1.1rem;font-weight:700;color:${volColor(data.portfolio_volatility)};">${data.portfolio_volatility}%</div></div>` : ""}
+            </div>
+          </div>`;
+      }
+
+      // Per-holding table
+      html += `<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;">Per Holding (1-Year Data)</div>`;
+
+      data.holdings.forEach(h => {
+        if (h.error) {
+          html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.78rem;color:var(--muted);">${h.ticker} — data unavailable</div>`;
+          return;
+        }
+        const returnColor = h.return_1y == null ? "var(--muted)" : h.return_1y >= 0 ? "var(--green)" : "var(--red)";
+        html += `
+          <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted;" onclick="tickerInput.value='${h.ticker}';analyze('${h.ticker}')">${h.ticker}</span>
+              <span style="font-size:0.78rem;font-weight:700;color:${returnColor};">${h.return_1y != null ? (h.return_1y >= 0 ? "+" : "") + h.return_1y + "% 1Y" : "—"}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.75rem;">
+              <div>
+                <span style="color:var(--muted);">Beta </span>
+                <span style="font-weight:600;color:${riskColor(h.beta)};">${h.beta != null ? h.beta : "—"}</span>
+                <span style="font-size:0.65rem;color:var(--muted);margin-left:3px;">${h.beta == null ? "" : h.beta < 0.8 ? "(low)" : h.beta < 1.2 ? "(market)" : h.beta < 1.8 ? "(high)" : "(very high)"}</span>
+              </div>
+              <div>
+                <span style="color:var(--muted);">Volatility </span>
+                <span style="font-weight:600;color:${volColor(h.volatility_1y)};">${h.volatility_1y != null ? h.volatility_1y + "%" : "—"}</span>
+              </div>
+              <div>
+                <span style="color:var(--muted);">Max Drawdown </span>
+                <span style="font-weight:600;color:${ddColor(h.max_drawdown_1y)}">${h.max_drawdown_1y != null ? "-" + h.max_drawdown_1y + "%" : "—"}</span>
+              </div>
+              <div>
+                <span style="color:var(--muted);">52W Range </span>
+                <span style="font-weight:600;color:var(--text);">${h.week52_low != null ? "$" + h.week52_low : "—"} – ${h.week52_high != null ? "$" + h.week52_high : "—"}</span>
+              </div>
+              ${h.pct_from_52w_high != null ? `<div style="grid-column:span 2;"><span style="color:var(--muted);">From 52W High </span><span style="font-weight:600;color:${h.pct_from_52w_high >= -5 ? "var(--amber)" : "var(--muted)"};">${h.pct_from_52w_high}%</span></div>` : ""}
+            </div>
+          </div>`;
+      });
+
+      // Legend
+      html += `
+        <div style="margin-top:10px;font-size:0.68rem;color:var(--muted);line-height:1.6;">
+          <div style="font-weight:700;margin-bottom:2px;">Beta guide:</div>
+          <span style="color:var(--green);">< 0.8 low risk</span> ·
+          <span>0.8–1.2 market</span> ·
+          <span style="color:var(--amber);">1.2–1.8 elevated</span> ·
+          <span style="color:var(--red);">> 1.8 high risk</span>
+        </div>`;
+
+      wrap.innerHTML = html;
+    } catch (e) {
+      wrap.innerHTML = `<div style="color:var(--red);font-size:0.82rem;">Error: ${e.message}</div>`;
+    }
+  })();
 }
 
 async function syncAllocationsFromPerf(p, holdings, perfData) {
