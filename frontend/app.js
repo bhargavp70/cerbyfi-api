@@ -1744,15 +1744,15 @@ function renderPerformanceTab(p, container) {
       });
       if (res.ok) {
         const data = await res.json();
-        // Sync allocations to actual market weights
-        await syncAllocationsFromPerf(p, updated, data);
-        await loadPortfolios();
         renderPerfResults(data, resultsEl);
+        // Sync allocations in background — don't block showing results
+        syncAllocationsFromPerf(p, updated, data).then(() => loadPortfolios()).catch(() => {});
       } else {
-        resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Failed to load performance data.</div>`;
+        const err = await res.json().catch(() => ({}));
+        resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Error: ${err.detail || res.status}</div>`;
       }
-    } catch {
-      resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Network error.</div>`;
+    } catch (e) {
+      resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Network error: ${e.message}</div>`;
     }
 
     saveBtn.disabled = false;
@@ -1762,16 +1762,20 @@ function renderPerformanceTab(p, container) {
   // Auto-load if money data already exists
   if (hasMoneyData) {
     (async () => {
-      resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;margin-top:8px;">Loading…</div>`;
+      resultsEl.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;margin-top:8px;">Loading performance…</div>`;
       try {
         const res = await fetch(`${API_BASE}/api/me/portfolios/${p.id}/performance`, { headers: apiHeaders() });
         if (res.ok) {
           const data = await res.json();
-          await syncAllocationsFromPerf(p, p.holdings, data);
-          await loadPortfolios();
           renderPerfResults(data, resultsEl);
+          syncAllocationsFromPerf(p, p.holdings, data).then(() => loadPortfolios()).catch(() => {});
+        } else {
+          const err = await res.json().catch(() => ({}));
+          resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Error: ${err.detail || res.status}</div>`;
         }
-      } catch { /* silent */ }
+      } catch (e) {
+        resultsEl.innerHTML = `<div style="color:var(--red);font-size:0.82rem;margin-top:8px;">Network error: ${e.message}</div>`;
+      }
     })();
   }
 }

@@ -201,7 +201,7 @@ def replace_holdings(portfolio_id: str, body: HoldingsIn, user_id: str = Depends
     if not score_db.get_portfolio(portfolio_id, user_id):
         raise HTTPException(status_code=404, detail="Portfolio not found.")
     total = sum(h.allocation for h in body.holdings)
-    if body.holdings and abs(total - 100.0) > 0.5:
+    if body.holdings and abs(total - 100.0) > 1.0:
         raise HTTPException(
             status_code=422,
             detail=f"Allocations must sum to 100. Got {total:.1f}."
