@@ -1563,7 +1563,7 @@ function renderPortfolioDetail() {
       row.className = "portfolio-holding-row";
       const hPct = h.pct_score;
       row.innerHTML = `
-        <span class="ph-ticker">${h.ticker}</span>
+        <span class="ph-ticker" style="cursor:pointer;text-decoration:underline dotted;" title="Analyze ${h.ticker}">${h.ticker}</span>
         <span class="ph-name">${escHtml(h.name || "")}</span>
         <span class="ph-alloc">${h.allocation.toFixed(0)}%</span>
         <span class="ph-score" style="color:${hPct !== null ? scoreColor(hPct) : 'var(--muted)'}">
@@ -1571,6 +1571,10 @@ function renderPortfolioDetail() {
         </span>
         <button class="ph-remove" data-ticker="${h.ticker}">✕</button>
       `;
+      row.querySelector(".ph-ticker").addEventListener("click", () => {
+        tickerInput.value = h.ticker;
+        analyze(h.ticker);
+      });
       row.querySelector(".ph-remove").addEventListener("click", async () => {
         await fetch(`${API_BASE}/api/me/portfolios/${p.id}/holdings/${h.ticker}`, {
           method: "DELETE", headers: apiHeaders(),
@@ -1839,7 +1843,7 @@ function renderPerfResults(data, el) {
     html += `
       <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.78rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <span style="font-weight:700;color:var(--text);">${h.ticker}</span>
+          <span style="font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted;" onclick="tickerInput.value='${h.ticker}';analyze('${h.ticker}')">${h.ticker}</span>
           <span style="color:${color(h.total_return)};font-weight:700;">${fmt$(h.total_return)} <span style="font-size:0.72rem;">(${fmtPct(h.total_return_pct)})</span></span>
         </div>
         <div style="display:flex;gap:12px;color:var(--muted);flex-wrap:wrap;">
