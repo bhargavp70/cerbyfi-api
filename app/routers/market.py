@@ -1,6 +1,7 @@
 """Public market data: indices, news, and admin-curated resources."""
 import uuid
 import requests
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from anyio import to_thread
 
@@ -18,6 +19,7 @@ _INDICES = [
 
 
 def _yahoo_index(symbol: str) -> dict:
+    from datetime import date, timezone, timedelta
     resp = requests.get(
         f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}",
         params={"interval": "5m", "range": "1d"},
@@ -26,8 +28,25 @@ def _yahoo_index(symbol: str) -> dict:
     )
     result = resp.json()["chart"]["result"][0]
     meta = result["meta"]
-    closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
-    closes = [round(c, 2) for c in closes if c is not None]
+    timestamps = result.get("timestamp", [])
+    raw_closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+
+    # Filter to only today's data points (US/Eastern market session)
+    # Yahoo returns timestamps in UTC; market day is determined by ET date
+    et_offset = timedelta(hours=-4)  # EDT (UTC-4); close enough for filtering
+    today_et = (date.today())
+    closes = []
+    for ts, c in zip(timestamps, raw_closes):
+        if c is None:
+            continue
+        bar_date = (datetime.fromtimestamp(ts, tz=timezone.utc) + et_offset).date()
+        if bar_date == today_et:
+            closes.append(round(c, 2))
+
+    # Fallback: use all non-null closes if today filter yields nothing (e.g. weekend/holiday)
+    if not closes:
+        closes = [round(c, 2) for c in raw_closes if c is not None]
+
     price = meta.get("regularMarketPrice")
     prev  = meta.get("chartPreviousClose") or meta.get("previousClose")
     change = (price - prev) if (price and prev) else None
@@ -36,7 +55,7 @@ def _yahoo_index(symbol: str) -> dict:
         "price":      round(price, 2) if price else None,
         "change":     round(change, 2) if change else None,
         "change_pct": round(change_pct, 2) if change_pct else None,
-        "sparkline":  closes[-40:],
+        "sparkline":  closes,
     }
 
 
