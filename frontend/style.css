@@ -1482,7 +1482,7 @@ footer {
     display: flex;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    order: 2;
+    order: 1;
     overflow: visible;
     min-height: 0;
     padding: 12px;
@@ -1490,7 +1490,7 @@ footer {
 
   .main-area {
     padding: 12px;
-    order: 1;
+    order: 2;
     overflow: visible;
     min-height: 0;
   }
