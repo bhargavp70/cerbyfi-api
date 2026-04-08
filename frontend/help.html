@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Help — CerbyFi</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=8" />
   <style>
     /* ── Help-page layout ── */
     .help-wrap {
@@ -285,7 +285,7 @@
         <li><a href="#searching">Searching a ticker</a></li>
         <li><a href="#watchlist">Watchlist</a></li>
         <li><a href="#accounts">Creating an account</a></li>
-        <li><a href="#portfolio">Portfolios</a></li>
+        <li><a href="#portfolio">Portfolios</a> — holdings, performance tracking, risk metrics</li>
         <li><a href="#optimize">Portfolio Optimizer — how it works</a></li>
         <li><a href="#ai-analysis">AI Analysis (Premium)</a></li>
         <li><a href="#faq">Frequently asked questions</a></li>
@@ -416,7 +416,7 @@
         <li><span class="step-num">3</span>Click <strong>Create account</strong>. You are logged in immediately and a verification email is sent to your address.</li>
       </ul>
 
-      <p>To sign back in later, click <strong>Sign in</strong> and enter your email and password. You stay signed in for 30 days.</p>
+      <p>To sign back in later, click <strong>Sign in</strong> and enter your email and password. You stay signed in for 24 hours; after that you will be prompted to sign in again.</p>
 
       <div class="callout callout-tip">
         <span class="callout-label">Tip:</span> Your password is stored securely using bcrypt hashing. CerbyFi never stores your plain-text password.
@@ -445,11 +445,10 @@
       <div class="help-subsection">
         <h4>Adding holdings</h4>
       </div>
+      <p>There are two ways to add a holding:</p>
       <ul class="steps">
-        <li><span class="step-num">1</span>Search for a stock or ETF using the main search box.</li>
-        <li><span class="step-num">2</span>Open the portfolio detail in the sidebar (click the portfolio name).</li>
-        <li><span class="step-num">3</span>Click <strong>+ Add [TICKER] to this portfolio</strong>. The button appears automatically when you have a portfolio open and the analyzed ticker is not already in it.</li>
-        <li><span class="step-num">4</span>The holding is added with a suggested allocation. Edit allocations to adjust.</li>
+        <li><span class="step-num">A</span><strong>Via search:</strong> Search for a stock or ETF using the main search box. With a portfolio open, click <strong>+ Add [TICKER] to this portfolio</strong>. The button appears automatically when the analyzed ticker is not already in the portfolio.</li>
+        <li><span class="step-num">B</span><strong>Direct add:</strong> Open the portfolio, type the ticker into the <em>"Add ticker directly"</em> input field, and press <strong>Add</strong>. This adds the ticker to the portfolio immediately — no analysis required beforehand. The holding will show N/A for score until you analyze it.</li>
       </ul>
 
       <div class="help-subsection">
@@ -477,6 +476,44 @@
       </div>
 
       <p>For example, if you hold two stocks — AAPL at 60% allocation with a score of 80, and TSLA at 40% allocation with a score of 50 — your aggregate score would be: (0.60 × 80) + (0.40 × 50) = 48 + 20 = <strong>68</strong>.</p>
+
+      <div class="help-subsection">
+        <h4>Performance tab — money tracking</h4>
+      </div>
+      <p>The <strong>Performance</strong> tab tracks the actual dollar return of your portfolio, including price gains and dividends.</p>
+      <ul class="steps">
+        <li><span class="step-num">1</span>Open a portfolio and click the <strong>Performance</strong> tab.</li>
+        <li><span class="step-num">2</span>For each holding, enter the number of shares, your average cost per share, and the original purchase date.</li>
+        <li><span class="step-num">3</span>Click <strong>Save &amp; Calculate Return</strong>. CerbyFi fetches the current price for each holding and looks up historical dividends since your purchase date.</li>
+        <li><span class="step-num">4</span>A summary card shows total amount invested, current market value, dividends received, and <strong>total return</strong> (price gain + dividends).</li>
+      </ul>
+
+      <p>Each holding shows a breakdown of its price gain, dividend income, and combined return. Clicking a ticker opens its full analysis.</p>
+
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip:</span> After saving performance data, the <strong>Sync Allocations</strong> button appears. Click it to update your portfolio allocation percentages to match the actual current market value of each holding — so your allocations always reflect what you truly own today.
+      </div>
+
+      <div class="help-subsection">
+        <h4>Risk tab — automatic risk metrics</h4>
+      </div>
+      <p>The <strong>Risk</strong> tab fetches live risk data for every holding automatically — no manual input required.</p>
+
+      <div class="example-box">
+        <div class="example-box-title">Metrics fetched automatically</div>
+        <table class="example-table">
+          <thead><tr><th>Metric</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td>Beta</td><td>How much the stock moves relative to the market (1.0 = in line with market)</td></tr>
+            <tr><td>Annualized Volatility</td><td>Standard deviation of daily returns over the past year, annualized</td></tr>
+            <tr><td>Max Drawdown (1yr)</td><td>Largest peak-to-trough decline over the past year</td></tr>
+            <tr><td>52-Week Range</td><td>Current price relative to 52-week low and high</td></tr>
+            <tr><td>1-Year Return</td><td>Price change over the past 12 months</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The tab also shows a <strong>portfolio-level summary</strong>: weighted beta and weighted volatility across all holdings, so you can see overall portfolio risk at a glance. Color-coding highlights holdings with high beta (&gt;1.5) or high volatility (&gt;40%) in amber or red.</p>
     </section>
 
 
@@ -493,9 +530,9 @@
       </div>
       <ul class="steps">
         <li><span class="step-num">1</span>Open a portfolio that has at least 2 holdings with scores. For best results, make sure each holding has been individually analyzed (so its full category breakdown is available).</li>
-        <li><span class="step-num">2</span>Click the <strong>Optimize</strong> button.</li>
-        <li><span class="step-num">3</span>A panel shows your current aggregate score, the optimized score, and the suggested allocation for each holding.</li>
-        <li><span class="step-num">4</span>Review the suggestions and click <strong>Apply Allocation</strong> to save, or click <strong>Optimize</strong> again to dismiss without applying.</li>
+        <li><span class="step-num">2</span>Click <strong>Optimize</strong> for the standard category-complementarity run, or <strong>Optimize + Risk</strong> to additionally penalize high-beta (volatile) holdings.</li>
+        <li><span class="step-num">3</span>A panel shows your current aggregate score, the optimized score, and the suggested allocation for each holding — including badges showing each holding's primary category driver.</li>
+        <li><span class="step-num">4</span>Review the suggestions and click <strong>Apply Allocation</strong> to save, or dismiss without applying.</li>
       </ul>
 
       <div class="help-subsection">
@@ -512,7 +549,8 @@
           <thead><tr><th>Rule</th><th>Value</th><th>Why</th></tr></thead>
           <tbody>
             <tr><td>Minimum per holding (floor)</td><td>5%</td><td>Every holding you added stays represented — nothing drops to zero</td></tr>
-            <tr><td>Maximum per holding (cap)</td><td>50%</td><td>Prevents extreme concentration — no single stock dominates the portfolio</td></tr>
+            <tr><td>Default maximum per holding (cap)</td><td>50%</td><td>Prevents extreme concentration — no single stock dominates the portfolio</td></tr>
+            <tr><td>Per-holding custom cap (Max%)</td><td>Your choice</td><td>Set a lower cap for any individual holding in the Edit Allocations panel</td></tr>
           </tbody>
         </table>
       </div>
@@ -523,12 +561,47 @@
         <li><span class="step-num">1</span><strong>Load category data.</strong> The optimizer looks up the full category breakdown for each holding from the score cache (e.g. AAPL's Growth score, Valuation score, Financial Strength score, etc.).</li>
         <li><span class="step-num">2</span><strong>Compute fractional share per category.</strong> For each category, the optimizer divides each holding's score by the sum of all holdings' scores in that category. This gives each holding a fractional share — how much of the portfolio's "coverage" of that category it provides.</li>
         <li><span class="step-num">3</span><strong>Sum across all categories.</strong> Each holding's fractional shares are added up across every category. A holding that tops Growth AND covers Valuation well earns more total credit than one that is simply average across the board.</li>
-        <li><span class="step-num">4</span><strong>Allocate proportionally.</strong> Every holding gets the 5% floor. The remaining 80%+ is distributed proportionally to the summed contributions, capped at 50% per holding.</li>
+        <li><span class="step-num">4</span><strong>Track the primary driver.</strong> The category in which each holding contributed the most credit is recorded as its <em>driver</em>. The optimizer result shows a badge (e.g. "Driver: Growth") so you understand <em>why</em> a holding received its suggested weight.</li>
+        <li><span class="step-num">5</span><strong>Apply per-holding caps.</strong> If you have set a custom Max% for any holding in the Edit Allocations panel, the optimizer honours that cap. Holdings that hit their cap are flagged with a "capped" badge.</li>
+        <li><span class="step-num">6</span><strong>Allocate proportionally.</strong> Every holding gets the 5% floor. The remaining allocation is distributed proportionally to the summed contributions, respecting the 50% global cap and any custom per-holding caps.</li>
       </ul>
 
       <div class="callout callout-tip">
         <span class="callout-label">Key insight:</span> A holding earns full credit in a category where it alone scores high. It shares credit proportionally when multiple holdings score similarly. This naturally rewards <em>complementary</em> holdings — stocks that cover different strengths — and prevents concentration in the top 1–2 scorers.
       </div>
+
+      <div class="help-subsection">
+        <h4>Optimize + Risk mode (beta-weighted)</h4>
+      </div>
+
+      <p>Clicking <strong>Optimize + Risk</strong> runs the same category-complementarity algorithm but additionally applies a <em>risk penalty</em> to high-beta holdings. Beta measures how much a stock moves relative to the broader market:</p>
+
+      <div class="example-box">
+        <div class="example-box-title">How the risk penalty works</div>
+        <table class="example-table">
+          <thead><tr><th>Holding's beta</th><th>Risk penalty multiplier</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>≤ 1.0 (low-risk)</td><td>1.0 (no penalty)</td><td>Full weight from category score</td></tr>
+            <tr><td>1.5</td><td>~0.82</td><td>Slightly reduced allocation</td></tr>
+            <tr><td>2.0</td><td>~0.71</td><td>Meaningfully reduced allocation</td></tr>
+            <tr><td>3.0+</td><td>min 0.40 (floor)</td><td>Maximum penalty applied</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The penalty is <code>1 / √beta</code>, floored at 0.40. This means a stock with a beta of 2.0 contributes only ~71% of the category-derived weight it would otherwise receive. The result badge shows the beta value used so you can see exactly what penalty was applied.</p>
+
+      <div class="callout callout-note">
+        <span class="callout-label">When to use it:</span> Use <strong>Optimize</strong> for a pure fundamentals-based allocation. Use <strong>Optimize + Risk</strong> if you want to tilt the portfolio toward lower-volatility holdings while still respecting each stock's unique category strengths.
+      </div>
+
+      <div class="help-subsection">
+        <h4>Per-holding maximum cap (Max%)</h4>
+      </div>
+
+      <p>In the <strong>Edit Allocations</strong> panel, each holding has a <em>Max%</em> input alongside the regular <em>Alloc%</em>. Setting Max% to, say, 20% tells the optimizer: "never allocate more than 20% to this holding, no matter how strongly it scores." This is useful for speculative or high-risk positions you want to keep small.</p>
+
+      <p>If you leave Max% blank, the default 50% global cap applies. Holdings that are capped by their Max% show a <em>capped</em> badge in the optimizer results.</p>
 
       <div class="help-subsection">
         <h4>Worked example</h4>
@@ -633,7 +706,7 @@
       <div class="help-subsection">
         <h4>Caching</h4>
       </div>
-      <p>Reports are cached for <strong>10 days</strong>. Once any premium user generates a report for a ticker, all signed-in users can read that cached report for free. A <strong>"Cached · Generated [date]"</strong> badge indicates a cached report. Generating a cached report does not count toward the monthly limit for anyone reading it.</p>
+      <p>Reports are cached for <strong>30 days</strong>. Once any premium user generates a report for a ticker, all signed-in users can read that cached report for free. A <strong>"Cached · Generated [date]"</strong> badge indicates a cached report. Reading a cached report does not count toward the monthly limit for anyone.</p>
 
       <div class="help-subsection">
         <h4>PDF download</h4>
@@ -669,6 +742,26 @@
       <div class="faq-item">
         <div class="faq-q">The optimizer shows the same score before and after. Why?</div>
         <div class="faq-a">Your current allocations may already closely match what the category-complementarity algorithm recommends. This can happen if you manually built a balanced portfolio, or if your holdings have very similar per-category scores so no rebalancing produces a meaningful change.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What is the difference between Optimize and Optimize + Risk?</div>
+        <div class="faq-a"><strong>Optimize</strong> uses only each holding's category scores to find the most complementary allocation. <strong>Optimize + Risk</strong> does the same but then applies a penalty of <code>1/√beta</code> to high-beta holdings, tilting the result toward lower-volatility stocks. Use Optimize + Risk when you want fundamentals-based diversification with an added preference for stability.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What does the "Driver" badge on an optimizer result mean?</div>
+        <div class="faq-a">The Driver badge shows the single category that contributed the most to a holding's recommended allocation. For example, if BRK.B shows "Driver: Valuation", it means BRK.B's unusually strong Valuation score is the main reason it received its suggested weight. This helps you understand <em>why</em> each holding is sized the way it is.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Why does a holding show "capped" in the optimizer results?</div>
+        <div class="faq-a">A holding is capped when the optimizer would have allocated more than its allowed maximum to it, but the cap limited it. The default cap is 50%. If you set a custom Max% for a holding in the Edit Allocations panel, that tighter cap is enforced instead. The excess weight is redistributed to other holdings.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Why does the Risk tab show an error for some tickers?</div>
+        <div class="faq-a">Risk metrics (beta, volatility, drawdown, 52-week range) are fetched live from Yahoo Finance. Occasionally this can fail if the ticker has limited trading history or if Yahoo Finance temporarily blocks the request. Try refreshing the Risk tab again — it often resolves on a retry.</div>
       </div>
 
       <div class="faq-item">

@@ -500,7 +500,7 @@ class ScoreDB:
 
     # ── AI Analysis cache ─────────────────────────────────────
 
-    _AI_CACHE_TTL = 10 * 24 * 3600  # 10 days
+    _AI_CACHE_TTL = 30 * 24 * 3600  # 30 days
 
     def count_ai_cache(self) -> int:
         cutoff = time.time() - self._AI_CACHE_TTL

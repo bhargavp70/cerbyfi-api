@@ -1154,7 +1154,7 @@ function hideHome() {
   document.getElementById("right-indices").style.display = "";
 }
 
-function renderSparkline(canvas, values) {
+function renderSparkline(canvas, values, changePct) {
   if (!values || values.length < 2) return;
   const w = canvas.clientWidth || 200, h = 40;
   const min = Math.min(...values), max = Math.max(...values);
@@ -1164,7 +1164,10 @@ function renderSparkline(canvas, values) {
     const y = h - ((v - min) / range) * (h - 4) - 2;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  const color = values[values.length - 1] >= values[0] ? "#00e599" : "#ff4d6a";
+  // Use the authoritative change_pct from Yahoo (prev close → current) for color;
+  // fall back to first-vs-last comparison only if not provided
+  const isUp = changePct != null ? changePct >= 0 : values[values.length - 1] >= values[0];
+  const color = isUp ? "#00e599" : "#ff4d6a";
   canvas.innerHTML = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
     <line x1="0" y1="${h - 2}" x2="${w}" y2="${h - 2}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="3,3"/>
@@ -1212,7 +1215,7 @@ function renderIndices(indices) {
 
     requestAnimationFrame(() => {
       const spark = card.querySelector("[data-spark]");
-      renderSparkline(spark, idx.sparkline);
+      renderSparkline(spark, idx.sparkline, idx.change_pct);
     });
   });
 
