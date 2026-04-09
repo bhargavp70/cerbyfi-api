@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CerbyFi</title>
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
 
@@ -243,6 +243,15 @@
 
       </div><!-- /home-row -->
 
+      <!-- About Us section -->
+      <div class="home-block" id="about-block">
+        <div class="home-block-title-row">
+          <span class="home-block-title" id="about-block-title">About CerbyFi</span>
+          <button id="about-edit-btn" class="wl-clear-btn accent-btn" style="display:none;">Edit</button>
+        </div>
+        <div id="about-content"></div>
+      </div>
+
     </div><!-- /home-section -->
 
     <!-- Error -->
@@ -356,7 +365,35 @@
   </div>
 </div>
 
+<!-- About edit modal -->
+<div id="about-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:560px;">
+    <button class="modal-close" id="about-modal-close">✕</button>
+    <h3 style="margin-bottom:20px;font-size:1.1rem;">Edit About Us</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <label style="font-size:0.85rem;color:var(--muted);">Title
+        <input id="about-input-title" type="text" maxlength="120"
+          style="display:block;width:100%;margin-top:6px;padding:8px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;" />
+      </label>
+      <label style="font-size:0.85rem;color:var(--muted);">Tagline
+        <input id="about-input-tagline" type="text" maxlength="200"
+          style="display:block;width:100%;margin-top:6px;padding:8px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.9rem;outline:none;box-sizing:border-box;" />
+      </label>
+      <label style="font-size:0.85rem;color:var(--muted);">Description
+        <textarea id="about-input-body" maxlength="1000" rows="4"
+          style="display:block;width:100%;margin-top:6px;padding:8px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.9rem;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+      </label>
+      <div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:10px;">Highlights (up to 3)</div>
+        <div id="about-highlights-editor" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div>
+    <div id="about-save-error" style="font-size:0.8rem;color:var(--red);margin-top:10px;"></div>
+    <button id="about-save-btn" class="auth-submit" style="width:100%;margin-top:16px;">Save</button>
+  </div>
+</div>
+
 <script src="/config.js"></script>
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

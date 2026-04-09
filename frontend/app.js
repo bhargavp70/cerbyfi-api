@@ -1183,7 +1183,124 @@ async function loadHome() {
     renderNews(data.news || []);
     renderResources(data.resources || []);
   } catch { /* silent */ }
+  loadAbout();
 }
+
+// ── About Us ──────────────────────────────────────────────
+
+let _aboutData = null;
+
+async function loadAbout() {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/about`);
+    if (!res.ok) return;
+    _aboutData = await res.json();
+    renderAbout(_aboutData);
+  } catch { /* silent */ }
+}
+
+function renderAbout(data) {
+  const block   = document.getElementById("about-block");
+  const titleEl = document.getElementById("about-block-title");
+  const content = document.getElementById("about-content");
+  const editBtn = document.getElementById("about-edit-btn");
+
+  titleEl.textContent = data.title || "About CerbyFi";
+  if (auth.user && auth.user.is_admin) editBtn.style.display = "";
+
+  const highlights = (data.highlights || []).map(h => `
+    <div class="about-highlight">
+      <div class="about-highlight-icon">${escHtml(h.icon || "")}</div>
+      <div class="about-highlight-title">${escHtml(h.title)}</div>
+      <div class="about-highlight-text">${escHtml(h.text)}</div>
+    </div>`).join("");
+
+  content.innerHTML = `
+    ${data.tagline ? `<div class="about-tagline">${escHtml(data.tagline)}</div>` : ""}
+    ${data.body    ? `<div class="about-body">${escHtml(data.body)}</div>` : ""}
+    ${highlights   ? `<div class="about-highlights">${highlights}</div>` : ""}
+  `;
+  block.style.display = "";
+}
+
+function openAboutEdit() {
+  const data = _aboutData || {};
+  document.getElementById("about-input-title").value   = data.title   || "";
+  document.getElementById("about-input-tagline").value = data.tagline || "";
+  document.getElementById("about-input-body").value    = data.body    || "";
+
+  const editor = document.getElementById("about-highlights-editor");
+  editor.innerHTML = "";
+  const highlights = data.highlights || [{icon:"",title:"",text:""},{icon:"",title:"",text:""},{icon:"",title:"",text:""}];
+  highlights.slice(0, 3).forEach((h, i) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:grid;grid-template-columns:48px 1fr 2fr;gap:8px;align-items:center;";
+    row.innerHTML = `
+      <input data-hi="${i}" data-field="icon" type="text" maxlength="4" placeholder="🔥"
+        value="${escHtml(h.icon||"")}"
+        style="padding:7px 6px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:1rem;outline:none;text-align:center;" />
+      <input data-hi="${i}" data-field="title" type="text" maxlength="80" placeholder="Feature title"
+        value="${escHtml(h.title||"")}"
+        style="padding:7px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none;" />
+      <input data-hi="${i}" data-field="text" type="text" maxlength="200" placeholder="Short description"
+        value="${escHtml(h.text||"")}"
+        style="padding:7px 10px;background:var(--surface2);border:1.5px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none;" />
+    `;
+    editor.appendChild(row);
+  });
+
+  document.getElementById("about-save-error").textContent = "";
+  document.getElementById("about-modal").style.display = "flex";
+}
+
+async function saveAbout() {
+  const btn = document.getElementById("about-save-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  const highlights = [];
+  document.querySelectorAll("#about-highlights-editor [data-hi]").forEach(inp => {
+    const i     = parseInt(inp.dataset.hi);
+    const field = inp.dataset.field;
+    if (!highlights[i]) highlights[i] = {icon:"",title:"",text:""};
+    highlights[i][field] = inp.value.trim();
+  });
+  const filtered = highlights.filter(h => h.title || h.text);
+
+  const body = {
+    title:      document.getElementById("about-input-title").value.trim(),
+    tagline:    document.getElementById("about-input-tagline").value.trim(),
+    body:       document.getElementById("about-input-body").value.trim(),
+    highlights: filtered,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/about`, {
+      method: "PATCH",
+      headers: { ...apiHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById("about-save-error").textContent = data.detail || "Save failed.";
+      return;
+    }
+    _aboutData = data.about;
+    renderAbout(_aboutData);
+    document.getElementById("about-modal").style.display = "none";
+  } catch (e) {
+    document.getElementById("about-save-error").textContent = "Network error.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
+}
+
+document.getElementById("about-edit-btn").addEventListener("click", openAboutEdit);
+document.getElementById("about-modal-close").addEventListener("click", () => {
+  document.getElementById("about-modal").style.display = "none";
+});
+document.getElementById("about-save-btn").addEventListener("click", saveAbout);
 
 // Store indices data for right-panel reuse
 let _lastIndices = [];

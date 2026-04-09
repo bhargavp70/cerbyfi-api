@@ -1374,6 +1374,53 @@ details.metrics-detail[open] summary::before { transform: rotate(90deg); }
   margin-top: 6px;
 }
 
+/* ── About Us section ── */
+.about-tagline {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.about-body {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+  max-width: 680px;
+}
+.about-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 4px;
+}
+.about-highlight {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.about-highlight-icon {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+}
+.about-highlight-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.about-highlight-text {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+@media (max-width: 640px) {
+  .about-highlights {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Left nav guest CTA */
 .nav-guest-card {
   margin: 8px 4px;

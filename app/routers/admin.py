@@ -1,4 +1,5 @@
 """Admin-only endpoints."""
+import json
 import secrets
 import time
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -150,3 +151,62 @@ def get_feedback(user_id: str = Depends(require_admin)):
 def delete_feedback(feedback_id: str, user_id: str = Depends(require_admin)):
     score_db.delete_feedback(feedback_id)
     return {"ok": True}
+
+
+# ── About Us ──────────────────────────────────────────────────
+
+_DEFAULT_ABOUT = {
+    "title": "About CerbyFi",
+    "tagline": "Smarter stock & ETF analysis for every investor",
+    "body": "CerbyFi scores every US-listed stock and ETF on a 100-point framework across valuation, profitability, growth, financial health, and momentum. Our goal is to make institutional-quality fundamental analysis accessible to retail investors — no Bloomberg terminal required.",
+    "highlights": [
+        {"icon": "📊", "title": "100-Point Scoring", "text": "Every stock scored across multiple categories with full metric breakdowns and a clear rating scale."},
+        {"icon": "🤖", "title": "AI Analysis", "text": "Premium AI reports powered by Claude with live web research — news, analyst sentiment, and opportunities."},
+        {"icon": "💼", "title": "Portfolio Tools", "text": "Build, optimize, and track your portfolio with real money tracking, dividends, and risk metrics."}
+    ],
+}
+
+
+@router.get("/about", dependencies=[])
+def get_about():
+    """Public — returns the About Us content."""
+    raw = score_db.get_setting("about_content", "")
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    return _DEFAULT_ABOUT
+
+
+@router.patch("/about")
+def update_about(body: dict, user_id: str = Depends(require_admin)):
+    """Admin — update About Us content."""
+    allowed = {"title", "tagline", "body", "highlights"}
+    data = {k: v for k, v in body.items() if k in allowed}
+
+    # Validate highlights structure
+    if "highlights" in data:
+        highlights = data["highlights"]
+        if not isinstance(highlights, list) or len(highlights) > 4:
+            raise HTTPException(status_code=422, detail="highlights must be a list of up to 4 items.")
+        for h in highlights:
+            if not isinstance(h, dict) or not h.get("title") or not h.get("text"):
+                raise HTTPException(status_code=422, detail="Each highlight needs title and text.")
+            h["icon"] = str(h.get("icon", ""))[:4]
+            h["title"] = str(h["title"])[:80]
+            h["text"] = str(h["text"])[:200]
+
+    if "title" in data:
+        data["title"] = str(data["title"])[:120]
+    if "tagline" in data:
+        data["tagline"] = str(data["tagline"])[:200]
+    if "body" in data:
+        data["body"] = str(data["body"])[:1000]
+
+    # Merge with existing so partial updates work
+    existing_raw = score_db.get_setting("about_content", "")
+    existing = json.loads(existing_raw) if existing_raw else dict(_DEFAULT_ABOUT)
+    existing.update(data)
+    score_db.set_setting("about_content", json.dumps(existing))
+    return {"ok": True, "about": existing}
